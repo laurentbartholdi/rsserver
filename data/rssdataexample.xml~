@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rspage SYSTEM "rsscp.dtd">
+<rspage>
+<window id="w1">
+	<head>Riemann Sphere example</head>
+	<text>This is an example of a valid data for Riemann Sphere representation</text>
+	<canvas type="sphere" id="canvas1" name="Julia set">
+		<function degree="2">
+			<nom>
+				<cn re="-1" im="0"/>
+				<cn />
+				<cn re="1" im="0"/>
+			</nom>
+			<denom degree="0">
+				<cn re="1" im="0"/>
+			</denom>
+			<cycle length="1">
+				<cn name="infinity"/>
+			</cycle>
+			<cycle length="2">
+				<cn />
+				<cn re="-1" im="1"/>
+			</cycle>
+		</function>
+		<point id="tau" canvas="canvas1" >
+			<label>Golden ratio</label>
+			<cn re="0.618" im="0"/>
+		</point>
+		<point id="minustau" canvas="canvas1" >
+			<label>Golden ratio</label>
+			<cn re="-0.618" im="0"/>
+		</point>
+		<button id="btn1" name="Action" canvas="canvas1"/>
+	</canvas>
+</window>
+</rspage>
+
+<updata><point id="pnt1" canvas="canvas1"><cn re=".5578" im="-3.321"/></point></updata>
+<downdata action="create" object="window1">
+	<canvas type="sphere" id="canvas2" name="Another canvas"/>
+</downdata>
+<downdata action="populate" object="canvas2">
+		<function degree="2">
+			<nom>
+				<cn re="-1" im="0"/>
+				<cn />
+				<cn re="0" im="-1"/>
+			</nom>
+			<denom degree="0">
+				<cn re="1" im="0"/>
+			</denom>
+			<cycle length="1">
+				<cn name="infinity"/>
+			</cycle>
+		</function>
+</downdata>

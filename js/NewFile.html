@@ -1,0 +1,29 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+</head>
+<body onload="show(false);">
+<script type="text/javascript">
+function showElement (el, val, block) {
+	el.setAttribute('style', 'display:' + (val? (block? 'block':'inline'):'none'));
+}
+function show (val) {
+showElement(document.getElementById('rbs'), val, true);
+showElement(document.getElementById('hide_btn'), val);
+showElement(document.getElementById('show_btn'), !val);
+
+}
+</script>
+Radio buttons <button id="show_btn" onclick="show(true);">&#9660;</button><button id="hide_btn" onclick="show(false);">&#9650;</button>
+<div id="rbs"> 
+<input type="radio">rb 1<br/>
+<input type="radio">rb 2<br/>
+<input type="radio">rb 3<br/>
+<input type="radio">rb 4<br/>
+</div>
+Next line
+
+</body>
+</html>

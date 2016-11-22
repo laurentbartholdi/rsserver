@@ -1,0 +1,13 @@
+@CHARSET "UTF-8";
+
+body {
+	background-color: #eeffcc;
+	font-family: Helvetica;
+}
+canvas {
+	border: 2px solid #cc3300;
+	
+}
+input.text {
+	width: 50;
+}

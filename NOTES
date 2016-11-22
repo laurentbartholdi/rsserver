@@ -1,0 +1,18 @@
+Что нужно от ConfigManager? 
+
+Interface: 
+
+Command line (node.js server)
+
+config set <name> <value> [<name> <value>...]
+config get <name>
+config save [filename]
+config load <filename>
+config reset
+параметры, для которых нужно перезагрузить канвас, перекомпилить шейдер, только изменить видимость объектов
+
+GAP
+Передавать параметры в принятом формате.
+
+
+

@@ -1,0 +1,1 @@
+<function degree='2'>\n<nom>\n<cn re='-1' im='0'/>\n<cn />\n<cn re='1' im='0'/>\n</nom>\n<denom degree='0'>\n<cn re='1' im='0'/>\n</denom>\n<cycle length='1'>\n<cn name='infinity'/>\n</cycle>\n<cycle length='2'/>\n<cn />\n<cn re='-1' im='1'/>\n</cycle>\n</function>

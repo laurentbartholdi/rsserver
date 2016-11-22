@@ -1,0 +1,31 @@
+1. Download and install node.js (nodejs.org)
+2. Install the ws package (https://github.com/websockets/ws)
+3. In a terminal, run "node rsserver"
+4. In a browser, go to http://127.0.0.1:1729/
+5. In GAP, execute the following commands:
+LoadPackage("scscp");
+cs:=InputOutputTCPStream("localhost", 1728);
+In the terminal where rsserver runs you should now read "tcp client connected".
+
+If you want to run a browser part on a remote computer, launch node with the IP address of
+the server as the second argument, for example:
+node rsserver 192.168.178.33
+GAP and node should always run in the same computer, so the first argument in 
+InputOutputTCPStream should always be "localhost".
+You can use other ports for the HTTP and TCP servers by specifying them 
+as the third and the fourth argument respectively:
+node rsserver 192.168.178.33 8080 1337
+
+To send data to the client, just write them into the created stream, for example
+WriteLine( cs, "FUNCTION -1.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0\nCYCLES 0.0 0.0 1 2 -1.0 0.0 0 2 Infinity any 2 1" );
+
+To receive data from the client, press the "Submit" button in the browser window, then read the same TCP stream in GAP. 
+
+One can also change some configuration parameteres from the terminal, where rsserver runs. Type "config set [name value [name value...]]". To read a current parameter value type "config get [name]". The same string could be send from GAP through the TCP-stream.
+
+UI
+Click and drag to rotate the sphere, Ctrl-click and drag to draw on it's surface.
+
+For Moebius transformation, double-click somewhere on the sphere surface to add a reference point. Double-click a reference point to remove it. Drag a reference point to apply the transformation moving this point to the new place and living the other reference points unchanged. It's also possible to use only two points for Moebius transformation: if you move one of the points, the second point and it's opposite will be unchanged.
+Shift-doouble-click to make selected point on the sphere. The point is dragable. 
+

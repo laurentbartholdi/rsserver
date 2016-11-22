@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Javascript's tests</title>
+</head>
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+
+<body onload="webGLStart();">
+<script type="text/javascript">
+
+var el = document.createElement("updata");
+el.setAttribute("atrr1", "val1");
+var child = document.createElement("child");
+el.appendChild(child);
+console.log ("new element", el);
+//var oSerializer = new XMLSerializer();
+var serializer = new XMLSerializer();
+console.log("serializer", serializer);
+var sXML = serializer.serializeToString(child);
+//var sXML = oSerializer.serializeToString(el);
+console.log("xml string", sXML);
+var parent = document.createElement("div");
+
+var p = document.createElement("p");
+parent.appendChild(p);
+
+console.log(parent.childNodes);
+var oParser = new DOMParser();
+
+function getSimpleNode(name) {
+	return (oParser.parseFromString("<"+name+"/>", "text/xml")).getElementsByTagName(name)[0];
+}
+
+var sMyString = '<a id="a"><b id="b">hey!</b></a>';
+var oDOM = oParser.parseFromString(sMyString, "text/xml");
+var child1 = getSimpleNode("child1");
+var innerChild = getSimpleNode("child2");
+child1.appendChild(innerChild);
+var ela = oDOM.getElementsByTagName("a")[0];
+ela.appendChild(child1);
+var returnedString = serializer.serializeToString(ela);
+console.log(sMyString, returnedString);
+
+var str = '{"key1": 1,"key2": ".1", "key3": "0xff0000"}';
+var n = JSON.parse(str);
+console.log(n);
+console.log(parseFloat(n.key2));
+var obj = {a: "a", b: [1, 2], c: 1};
+var obj1 = {};
+obj1.obj = obj;
+console.log(obj1.obj.b[0]);
+var arr = obj.b;
+obj = null;
+arr[0]=0;
+console.log(obj1.obj.b[0]);
+var f = "#ffcc00";
+console.log(parseInt(f));
+
+function testFunc() {
+console.log("testFunc");
+document.getElementById("ttable").setAttribute("width", "700");
+document.getElementById("ttable").setAttribute("height", "100");
+gl.viewportWidth = 700;
+gl.viewportHeight = 100;
+drawScene();
+}
+function initCanvas() {
+var canvas = document.getElementById("ttable");
+//var ctx = canvas.getContext("2d");
+//console.log(ctx);
+
+}
+</script>
+<div>
+<table border="1"><tr><td width="512">
+<canvas width="500" height="200" id="ttable" style="border:1px solid #000000;">
+</canvas></td></tr></table></div>
+<button onclick="testFunc();">Test</button>
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    void main(void) {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    }
+</script>
+
+
+<script type="text/javascript">
+
+    var gl;
+    function initGL(canvas) {
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+        } catch (e) {
+        }
+        if (!gl) {
+            alert("Could not initialise WebGL, sorry :-(");
+        }
+    }
+
+
+    function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) {
+            return null;
+        }
+
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+
+
+    var shaderProgram;
+
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    }
+
+
+    var mvMatrix = mat4.create();
+    var pMatrix = mat4.create();
+
+    function setMatrixUniforms() {
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+
+
+
+    var triangleVertexPositionBuffer;
+    var squareVertexPositionBuffer;
+
+    function initBuffers() {
+        triangleVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        var vertices = [
+             0.0,  1.0,  0.0,
+            -1.0, -1.0,  0.0,
+             1.0, -1.0,  0.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        triangleVertexPositionBuffer.itemSize = 3;
+        triangleVertexPositionBuffer.numItems = 3;
+
+        squareVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+        vertices = [
+             1.0,  1.0,  0.0,
+            -1.0,  1.0,  0.0,
+             1.0, -1.0,  0.0,
+            -1.0, -1.0,  0.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        squareVertexPositionBuffer.itemSize = 3;
+        squareVertexPositionBuffer.numItems = 4;
+    }
+
+
+    function drawScene() {
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+        mat4.identity(mvMatrix);
+
+        mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        setMatrixUniforms();
+        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+
+
+        mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        setMatrixUniforms();
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
+    }
+
+
+
+    function webGLStart() {
+        var canvas = document.getElementById("ttable");
+        initGL(canvas);
+        initShaders();
+        initBuffers();
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+
+        drawScene();
+    }
+
+
+</script>
+</body>
+</html>

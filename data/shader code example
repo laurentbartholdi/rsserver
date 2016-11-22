@@ -1,0 +1,129 @@
+const int Iterations= 50;
+const float actualInfinity= 1e+35;
+const float pixelSize= 0.002;
+const int minIterNum= 8;
+const int minIterNumJulia= 3;
+const float runAwayRadius= 0.5;
+const float convergeEpsilon= 1e-12;
+const int commonCyclePeriod= 2;
+const float invInfinity= 1e-35;
+
+varying vec3 vLightFront;
+varying vec2 vC;
+varying float vScale;
+varying vec2 vZ;
+varying vec2 vW;
+// Color parameters
+bool isInf(vec2 v) {
+	return v.x > actualInfinity || v.x < -actualInfinity || v.y > actualInfinity || v.y < -actualInfinity;
+}
+bool isNaN(float val)
+{
+return (val <= 0.0 || 0.0 <= val) ? false : true;
+}
+bool isNaN(vec2 v) {
+ return isNaN(v.x) || isNaN(v.y);
+}
+vec3 complex2rgb(vec2 z){
+	float l = float(!isNaN(z))*length(z) + float(isNaN(z))*.5;
+	float phi = float(!isNaN(z))*atan(z.y, z.x);
+   vec3 c = vec3(phi < 0. ? phi/6.283185307 + 1. : phi/6.283185307,clamp(l, 0.0, 1.0), clamp(1./l, 0.0, 1.0));
+   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+ return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+vec2 complexMul(vec2 a, vec2 b) {
+	return vec2( a.x*b.x -  a.y*b.y,a.x*b.y + a.y * b.x);
+}
+vec2 complexDiv(vec2 a, vec2 b) {
+	return vec2( a.x*b.x +  a.y*b.y,-a.x*b.y + a.y * b.x)/dot(b,b);
+}
+vec3 color(vec2 c, vec2 z, vec2 w, float scale) {
+ 	vec2 n = z;
+   vec2 d = w;
+    vec2 dn, dd, czdiff, dernum;
+  vec2 nfinal =n;
+vec2 dfinal= d;
+vec2 complex1 = vec2(1., 0.);
+   float lambda;
+  bool isinfinity = false;
+  bool isJulia = false;
+  bool isFatou = false;
+  bool finish = false;
+ float floatFinish = 0.;
+ float floatUnFinish = 1.;
+ float absz2 = dot(c, c);
+  float absdn2inv, absn2, absd2;
+  float factorc = 1./(1.+ absz2);
+     float dz2=pixelSize/scale*factorc;
+  dz2 *= dz2;
+  float dz2factor;
+vec2 n1;
+vec2 n2;
+vec2 d1;
+vec2 d2;
+vec2 nd1;
+
+	for (int i = 0; i <= Iterations; i++) {
+n1 = float(!finish)*n;
+n2 = complexMul(n1, n1);
+d1 = float(!finish)*d;
+d2 = complexMul(d1, d1);
+nd1 = complexMul(n1, d1);
+
+dn = complexMul(vec2(0.0, 0.0), n2);
+dn = dn + complexMul(vec2(2.0, 0.0), nd1);
+dn = dn + complexMul(vec2(0.0, 0.0), d2);
+
+dd = complexMul(vec2(0.0, 0.0), n2);
+dd = dd + complexMul(vec2(0.0, 0.0), nd1);
+dd = dd + complexMul(vec2(0.0, 0.0), d2);
+
+n = complexMul(vec2(1.0, 0.0), n2);
+n = n + complexMul(vec2(0.0, 0.0), nd1);
+n = n + complexMul(vec2(-1.0, 0.0), d2);
+
+d = complexMul(vec2(0.0, 0.0), n2);
+d = d + complexMul(vec2(0.0, 0.0), nd1);
+d = d + complexMul(vec2(1.0, 0.0), d2);
+
+ isinfinity = isinfinity || isNaN(n) || isNaN(d) || isInf(n) || (abs(d.x) + abs(d.y)) < invInfinity;
+floatUnFinish = float(!finish);
+floatFinish = float(finish);
+d = floatUnFinish*d + floatFinish*complex1;
+lambda = floatUnFinish/(abs(n.x) + abs(n.y) + abs(d.x) + abs(d.y));
+n *= lambda;
+d *= lambda;
+dn *= lambda;
+dd *= lambda;
+dernum = complexMul(dn,d)-complexMul(dd,n);
+absn2 = dot(n,n);
+absd2 = dot(d,d);
+absdn2inv = floatUnFinish/(absn2 + absd2);
+dz2factor = absdn2inv*(1. + absz2);
+dz2factor *= dz2factor;
+dz2 *= dz2factor*dot(dernum, dernum);
+nfinal = floatFinish*nfinal + floatUnFinish*n;
+dfinal = floatFinish*dfinal + floatUnFinish*d;
+	isJulia = isJulia ||(	 i > minIterNumJulia && dz2 > runAwayRadius ); 
+isFatou = isFatou || (i > minIterNum && (i - commonCyclePeriod*(i/commonCyclePeriod) == 0)  && dz2 < convergeEpsilon);
+absz2 = floatUnFinish*absn2/absd2;
+finish = finish || isinfinity || isJulia || isFatou;
+	}
+       return float(!isJulia)*complex2rgb(complexDiv(nfinal, dfinal))+float(isJulia)*vec3(0.6, 0.6, 0.6);
+}
+void main() {
+float r, g, b;
+vec2 c = vC;
+vec2 z = vZ;
+vec2 w = vW;
+float scale = vScale;
+vec3 v = vec3(0.0,0.0,0.0);
+v = color(c, z, w, scale);
+r = v.x;
+g = v.y;
+b = v.z;
+gl_FragColor = vec4(r, g, b, 1.0);
+gl_FragColor.xyz *= vLightFront;
+}1 RSCanvas.js:1253:6
+
