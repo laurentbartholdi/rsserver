@@ -1,1 +1,0 @@
-<downdata><rotation x='0.0' y='0.0' z='0.2' order='XYZ'/><transform><cn re='2' im='0'/><cn re='0' im='0'/><cn re='0' im='1'/><cn re='1' im='0'/></transform><point></point><point id="tau" canvas="canvas1" ><label>Golden ratio</label><cn re="0.618" im="0"/></point><point id="minustau" canvas="canvas1" ><label>Golden ratio</label><cn re="-0.618" im="0"/></point></downdata>
