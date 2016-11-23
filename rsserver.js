@@ -118,7 +118,8 @@ wss.on('connection', function(ws) {
    //ws.send('FUNCTION 0.0 1.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0\n'+
 	//'CYCLES Infinity any 0 1');
    //ws.send("<function degree='2'><nom><cn re='-1' im='0'/><cn /><cn re='1' im='0'/></nom><denom degree='0'><cn re='1' im='0'/></denom><cycle length='1'><cn name='infinity'/></cycle><cycle length='2'><cn /><cn re='-1' im='1'/></cycle></function>");
-   ws.send("<function degree='2'><nom><cn name='1'/><cn /><cn name='i'/></nom><denom degree='0'><cn name='1'/></denom><cycle length='1'><cn name='infinity'/></cycle><cycle length='2'><cn /><cn re='-1' im='1'/></cycle></function>");
+  //ws.send("<function degree='2'><nom><cn name='1'/><cn /><cn name='i'/></nom><denom degree='0'><cn name='1'/></denom><cycle length='1'><cn name='infinity'/></cycle><cycle length='2'><cn /><cn re='-1' im='1'/></cycle></function>");
+   ws.send("<function type='newton' degree='6'/>");
 });
 
 function addConnection (ws) {
