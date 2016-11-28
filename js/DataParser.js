@@ -1,5 +1,21 @@
 //Copyright (c) Anna Alekseeva 2013-2016
 
+function parseQueryString(){
+	var queryString = window.location.search;
+	//var handShakeData = createEmptyNode("window");
+	var res = {};
+	if (queryString) {
+		queryString = queryString.substring(1);
+		var params = queryString.split("&");
+		for (var i = 0; i < params.length; i++){
+			var keyValue = params[i].split("=");
+			res[keyValue[0]] = keyValue[1];
+		}
+			
+	}
+	return res;
+}
+
 var parseXml;
 
 if (typeof window.DOMParser != "undefined") {
@@ -21,6 +37,21 @@ function createEmptyNode (name){
 	return (parseXml("<"+name+"/>", "text/xml")).getElementsByTagName(name)[0];
 }
 var xmlSerializer = new XMLSerializer();
+
+function parseQueryStringToXMLAttributes (node) {
+	var queryObj = parseQueryString();
+	for (var f in queryObj) {
+		if (queryObj.hasOwnProperty(f)) node.setAttribute(f, queryObj[f]);
+	}
+}
+function attributesToQueryString(node){
+	var res = [];
+	var a = node.attributes;
+	for (var f in a ) {
+		if (a.hasOwnProperty(f)) res.push(f + "=" + a[f]);
+	}
+	return res.join("&");
+}
 
 function xmlToStrings (xmlElement, res) {
 	if (typeof xmlElement === "string") xmlElement = parseXml(xmlElement);
@@ -60,12 +91,16 @@ function xmlToStrings (xmlElement, res) {
 			res.push(sp);
 			console.log("newton-random", res);
 			
-		} else {
+		} else if (xmlElement.getAttribute("type") == "identity"){
+			res.push("FUNCTION 0 0 1 0 1 0 0 0");
+			res.push("CONFIG Iterations 1");
+		} 
+		else {
 		
 			var s = "FUNCTION";
 			var deg = xmlElement.getAttribute("degree");
-			var nom = xmlElement.getElementsByTagName("nom")[0];
-			s += parseArrayOfComplex(nom.getElementsByTagName("cn"), deg);
+			var numer = xmlElement.getElementsByTagName("numer")[0];
+			s += parseArrayOfComplex(numer.getElementsByTagName("cn"), deg);
 			var denom = xmlElement.getElementsByTagName("denom")[0];
 			s += parseArrayOfComplex(denom.getElementsByTagName("cn"), deg);
 			coefs = denom.getElementsByTagName("cn");

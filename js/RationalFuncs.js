@@ -237,7 +237,13 @@ var complexToColorString_ = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n" +
    " return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n" +
 "}";
 
-var complexToColorString = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n"+ // n/d is a normalized P1 point
+var complexToColorString = 	"vec3 complex2rgb(vec2 n, vec2 d){\n"+ // n/d is a normalized P1 point
+"  vec3 p = vec3(2.*dot(n,d),2.*(n.y*d.x-n.x*d.y),dot(d,d)-dot(n,n));\n"+  // project to sphere in R^3
+"  return smoothstep(-0.5,1.0,p*mat3(vec3(1.0,0.0,0.0),vec3(-0.5,0.866025,0.0),vec3(-0.5,-0.866025,0.0)))+p.z*vec3(1.0,1.0,1.0);\n"+ // combination of red at 1, green at omega, blue at omega^2, white at 0, and black at infinity
+"}";
+
+
+var complexToColorString__ = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n"+ // n/d is a normalized P1 point
 "    float nl = length(n);\n" +
 "    float dl = length(d);\n" +
 "    float theta = atan(2.*dl*nl, nl*nl - dl*dl)/1.570796327;//float(!isNaN(z))*length(z) + float(isNaN(z))*.5; \n"+
@@ -269,7 +275,8 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	};
 	console.log("cyclePeriod", jData.cycleperiod);
 	var juliaColor = jData.config.juliaColor || new THREE.Color(0x999999);
-	var juliatestMethods = [	
+	console.log("jData ", jData);
+	var juliatestMethods = jData.degree > 1 ? [	
 	"// Color parameters",
 	complexToColorString,
 
@@ -284,7 +291,7 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	"  float lambda = inversesqrt(dot(z,z)+dot(w,w));",
 	"  vec2 n0 = z*lambda;",
 	"  vec2 d0 = w*lambda;", // n0/d0 is the beginning point, normalized
-	"  return complex2rgb(n0,d0);", // test sphere color
+	//"  return complex2rgb(n0,d0);", // test sphere color
 	"  vec2 n = n0, d = d0, nx, dx, ny, dy, nz, dz, t;",
 	"  float dz2 = pixelSize/scale/(1.+ dot(c, c));",
 	"  dz2 *= dz2;", // we store |dz|^2 to avoid square roots
@@ -306,7 +313,25 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	"  }",
 	"  return complex2rgb(n,d);", // unknown, this is our best guess
 	"}"
-	].join("\n");
+	].join("\n") : 
+		[	
+			"// Color parameters",
+			complexToColorString,
+
+			"vec2 complexMul(vec2 a, vec2 b) {",
+			"	return vec2(a.x*b.x-a.y*b.y,dot(a.xy,b.yx));",
+			"}",
+			"vec2 complexDiv(vec2 a, vec2 b) {", // unused
+			"	return vec2(dot(a,b),a.y*b.x-a.x*b.y)/dot(b,b);",
+			"}",
+
+			"vec3 color(vec2 c, vec2 z, vec2 w , float scale) {", // scale unused
+			"  float lambda = inversesqrt(dot(z,z)+dot(w,w));",
+			"  vec2 n0 = z*lambda;",
+			"  vec2 d0 = w*lambda;", // n0/d0 is the beginning point, normalized
+			"  return complex2rgb(n0,d0);", // test sphere color
+			"}"
+			].join("\n");
 console.log(juliatestMethods);	
 	var juliatestCode = [
 	 	              	"vec3 v = vec3(0.0,0.0,0.0);",
