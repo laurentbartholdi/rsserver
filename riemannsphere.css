@@ -3,11 +3,18 @@
 body {
 	background-color: #eeffcc;
 	font-family: Helvetica;
+		color: #660000;
+	
 }
 canvas {
 	border: 2px solid #cc3300;
+	background-color: #000099;
 	
 }
 input.text {
 	width: 50;
+}
+p.server-text {
+	font-family: Helvetica;
+	color: #993300;
 }
