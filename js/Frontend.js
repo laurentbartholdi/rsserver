@@ -109,13 +109,16 @@ var DATA_IN_XML = true;
 		}
 		
 		function populateCanvas(container, dataElement){
-			if (container.getAttribute("contains") == "canvas" && container.rscc){
-				var dataStructure = xmlToStrings(dataElement); //in DataParser.js
-				var dataObject = getCanvasDataFromXML(dataElement);
-				var surfaceData = initJuliaMap(dataStructure, /*Old map?*/{},true);
-				surfaceData.updateUniformsDeclaration();
-				container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
-				getOutputDomElement(dataObject, container.outputLine, 3);
+			if (container.getAttribute("contains") == "canvas" && container.rscc && container.rscc.rsCanvas){
+				if (dataElement.getElementsByTagName("function").length > 0) {
+					var dataStructure = xmlToStrings(dataElement); //in DataParser.js
+					var dataObject = getCanvasDataFromXML(dataElement);
+					var surfaceData = initJuliaMap(dataStructure, /*Old map?*/{},true);
+					surfaceData.updateUniformsDeclaration();
+					container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
+					getOutputDomElement(dataObject, container.outputLine, 3);
+				}
+				container.rscc.rsCanvas.parseData(dataElement);
 				/** /
 				function applyMap(newData) {
 					console.log("apply map");

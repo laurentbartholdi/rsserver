@@ -1136,7 +1136,10 @@ RSCanvas.prototype = {
 			if (DATA_IN_XML) {
 				if (typeof data === "string") data = parseXml(data);
 				console.log("after parsing", data);
-				data = data.getElementsByTagName("downdata")[0];
+				var ddata = data.getElementsByTagName("downdata");
+				if (ddata.length > 0) data = data.getElementsByTagName("downdata")[0];
+				ddata = data.getElementsByTagName("canvas");
+				if (ddata.length > 0) data = data.getElementsByTagName("canvas")[0];
 				console.log("downdata node", data);
 				var transformParsed = false;
 				var pointsParsed = false;
