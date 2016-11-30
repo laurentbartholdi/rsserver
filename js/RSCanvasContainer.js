@@ -9,6 +9,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	this.canvasData.configManager = this.configManager;
 	//this.canvasData.bkgColor = this.configManager.getConfigValue("bkgColor");
 	var that = this;
+	console.log("creating canvas container", idArg);
 
 	this.changeShowGrid = function (event) {
 		that.rsCanvas.showGridChanged = true;
@@ -105,6 +106,11 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	//var autoId = 0;
 	if (document.icautoID === undefined) document.icautoID = 0;
 	
+	if (this.canvasData.name) {
+		var headLine = document.createElement("h2");
+		headLine.innerHTML = this.canvasData.name;
+		domElement.appendChild(headLine);
+	}
 	
 	var tbl = document.createElement("table");
 	domElement.appendChild(tbl);
@@ -114,14 +120,15 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	tbl.appendChild(document.createElement("tr").appendChild(canvasCell));
 	/*TODO get rid off this crasy "+12" thing*/ 
 	var cellWidth = this.canvasWidth;// + 12;
-	canvasCell.setAttribute("width", cellWidth.toString());
+	canvasCell.setAttribute("width", cellWidth.toString()+"px");
 	canvasCell.setAttribute("colspan", "4");
+	tbl.setAttribute("width", cellWidth);
 
 	var mainCanvas = document.createElement("canvas");
 	mainCanvas.setAttribute("width", this.canvasWidth.toString());
 	mainCanvas.setAttribute("height", this.canvasHeight.toString());
 	if (this.canvasData.name) mainCanvas.setAttribute("name", this.canvasData.name);
-	mainCanvas.setAttribute("id", "canvas" + (document.icautoID++));
+	mainCanvas.setAttribute("id", "canvas3d" + (document.icautoID++));
 	canvasCell.appendChild(mainCanvas);
 
 	
@@ -188,13 +195,15 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	this.rsCanvas.showGrid = showGrid.checked;
 	this.rsCanvas.showLabels = showLabels.checked;
 	this.rsCanvas.showGridChanged = true;
+	
 	this.rsCanvas.rsCanvasId = idArg || ("rsCanvas" + document.icautoID++);
+	if (domElement.hasAttribute("id")) this.rsCanvas.serverId = domElement.getAttribute("id");
 	
 	
 	function addInput(domElement, type, text, event, handler, idarg) {
 		var res = document.createElement("input");
 		res.setAttribute("type", type);
-		var id = idarg || type + (document.icautoID++);
+		var id = idarg || type + (document.icautoID++) + idArg;
 		res.setAttribute("id", id);
 		domElement.appendChild(res);
 		if (type.toLowerCase() == "button") {

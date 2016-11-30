@@ -198,7 +198,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				
 				this.sphere.material.attributes.c.needsUpdate = true;
 				this.sphere.material.attributes.scale.needsUpdate = true;
-			} else {
+			} else if (this.sphere.material.complexTextureImage) {
 				
 				this.updateMaterialMap();
 			}
@@ -734,6 +734,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	}
 	//-----------------shader material----------------------------------
 	this.initShaderMaterial = function(geom, shaderMap) {
+		console.log("initShaderMaterial", arguments);
 		if (!shaderMap) shaderMap = new ComplexShaderMap();
 		sphereShaderAttributes = {
 				c: {type: "v2", value: []},
@@ -990,14 +991,16 @@ RSCanvas.prototype = {
 			this.configManager = this.canvasData.configManager;
 			this.bkgColor = this.configManager.getConfigValue("bkgColor") || new THREE.Color(0x333333);
 			
-
+			
 			var sphGeom = new THREE.SphereGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
 
-			var sphMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 }); 
+			var sphMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); 
 			if (materialData) { 
 				if (materialData instanceof ComplexShaderMap) {
+					console.log("ShaderMap created", materialData)
 					sphMaterial = this.initShaderMaterial(sphGeom, materialData);
 				} else if (materialData instanceof TextureImage){
+					console.log("TextureImage", materialData);
 					sphMaterial = new THREE.MeshLambertMaterial({
 						map : new THREE.Texture(materialData.textureCanvas)
 						//map : new THREE.Texture(document.getElementById("test-canvas"))
@@ -1005,7 +1008,9 @@ RSCanvas.prototype = {
 					sphMaterial.complexTextureImage = materialData;
 					sphMaterial.needsUpdate = true;
 					sphMaterial.map.needsUpdate = true;
-				}
+				} else sphMaterial = this.initShaderMaterial(sphGeom);
+			} else {
+				sphMaterial = this.initShaderMaterial(sphGeom);
 			}
 			this.sphere = new THREE.Mesh( sphGeom, sphMaterial );
 			this.sphere.dynamic = true;
@@ -1013,6 +1018,7 @@ RSCanvas.prototype = {
 			this.scene = new THREE.Scene();
 			this.camera = new THREE.PerspectiveCamera( RSCanvas.CAMERA_FOV, this.canvas3d.width / this.canvas3d.height, 0.1, 1000 );
 			//setStyleConstants();
+			console.log("canvas3d", this.canvas3d, "sphere", this.sphere);
 			this.renderer = new THREE.WebGLRenderer({canvas: this.canvas3d});
 
 			this.renderer.setSize( this.canvas3d.width, this.canvas3d.height );
@@ -1027,12 +1033,12 @@ RSCanvas.prototype = {
 			
 			    
 			this.scene.add( this.sphere );
-			this.sphere.rotation.x = -1.2;//.6;
-			this.sphere.rotation.y = .6;//1;
-			this.sphere.rotation.z = -1.4;//.2;
+			this.sphere.rotation.x = 2;//2.8;
+			this.sphere.rotation.y = 0;//-1;
+			this.sphere.rotation.z = 0.7;//2;
 			
 			// <rotation x="-1.6762869448210695" y="0.6377511515907812" z="-0.41649239746795746" order="XYZ"/>
-
+			//<rotation x="2.756627544252358" y="-1.0473795813912428" z="1.9898073352816288" order="XYZ"/>
 
 			this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
 
@@ -1079,69 +1085,42 @@ RSCanvas.prototype = {
 		
 
 		getSnapshot: function() {
-			if (DATA_IN_XML) {
-				
-//				var snapshotXMLObj = document.createElement("updata");
-				var snapshotXMLObj = createEmptyNode("updata");
-				var rotEl = createEmptyNode("rotation");
-				rotEl.setAttribute("x", this.sphere.rotation.x);
-				rotEl.setAttribute("y", this.sphere.rotation.y);
-				rotEl.setAttribute("z", this.sphere.rotation.z);
-				rotEl.setAttribute("order", this.sphere.rotation.order);
-				//snapshotXMLObj.childNodes = [];
-				snapshotXMLObj.appendChild(rotEl);
-				
-				var transformEl = createEmptyNode("transform");
-				transformEl.appendChild(this.currentTransform.a.toXMLObj());
-				transformEl.appendChild(this.currentTransform.b.toXMLObj());
-				transformEl.appendChild(this.currentTransform.c.toXMLObj());
-				transformEl.appendChild(this.currentTransform.d.toXMLObj());
-				snapshotXMLObj.appendChild(transformEl);
-
-				var pts = this.getSelectedPoints();
-				for (var i = 0; i < pts.length; i++) {
-					snapshotXMLObj.appendChild(createEmptyNode("point")).appendChild(pts[i].toXMLObj());
-				}
-				var drw = this.getDrawings();
-				for (var i = 0; i < drw.length; i++) {
-					var lineXMLObj = snapshotXMLObj.appendChild(createEmptyNode("line"));
-					for (var j = 0; j < drw[i].length; j++ ) {
-						lineXMLObj.appendChild(drw[i][j].toXMLObj());
-					}
-				}
-				//rootObj.appendChild(snapshotXMLObj);
-				//snapshotXMLObj.setAttribute("xmlns", "");
-				return xmlSerializer.serializeToString(snapshotXMLObj);
+			//TODO Where to add canvas id?
+			//TODO make this not when submit button pressed, but when mouse button is released
+			var snapshotXMLObj = createEmptyNode("canvas");
+			var rotEl = createEmptyNode("rotation");
+			rotEl.setAttribute("x", this.sphere.rotation.x);
+			rotEl.setAttribute("y", this.sphere.rotation.y);
+			rotEl.setAttribute("z", this.sphere.rotation.z);
+			rotEl.setAttribute("order", this.sphere.rotation.order);
+			//snapshotXMLObj.childNodes = [];
+			snapshotXMLObj.appendChild(rotEl);
 			
-			} else {
-				var res = []; 
-				var curIndex = 0;
-				function getStringPart(title, body) {
-					res[curIndex] = title + " " + body;
-					curIndex ++;
-				}
-				function complexArrayToString (arg) {
-					var res = "";
-					for (var i = 0; i < arg.length; i++){
-						res += arg[i].re + " " + arg[i].i + (i == arg.length - 1 ? "" : " ");
-					}
-					return res;
-				}
-				getStringPart("ROTATION", this.sphere.rotation.x + " " 
-						+ this.sphere.rotation.y + " " 
-						+ this.sphere.rotation.z + " " 
-						+ this.sphere.rotation.order);
-				getStringPart("TRANSFORM", this.currentTransform.getRawString());
-				var pts = this.getSelectedPoints();
-				getStringPart("POINTS", complexArrayToString(pts));
-				var drw = this.getDrawings();
-				var drw_str = "" + drw.length;
-				for (var d = 0; d < drw.length; d++) {
-					drw_str += "\n" + complexArrayToString(drw[d]);
-				}
-				getStringPart("LINES", drw_str);
-				return res.join("\n")+"\n";
+			var transformEl = createEmptyNode("transform");
+			transformEl.appendChild(this.currentTransform.a.toXMLObj());
+			transformEl.appendChild(this.currentTransform.b.toXMLObj());
+			transformEl.appendChild(this.currentTransform.c.toXMLObj());
+			transformEl.appendChild(this.currentTransform.d.toXMLObj());
+			snapshotXMLObj.appendChild(transformEl);
+
+			var pts = this.getSelectedPoints();
+			for (var i = 0; i < pts.length; i++) {
+				snapshotXMLObj.appendChild(createEmptyNode("point")).appendChild(pts[i].toXMLObj());
 			}
+			var drw = this.getDrawings();
+			for (var i = 0; i < drw.length; i++) {
+				var lineXMLObj = snapshotXMLObj.appendChild(createEmptyNode("line"));
+				for (var j = 0; j < drw[i].length; j++ ) {
+					lineXMLObj.appendChild(drw[i][j].toXMLObj());
+				}
+			}
+			var rootObj = createEmptyNode("updata");
+			if (this.serverId) rootObj.setAttribute("object", this.serverId);
+			rootObj.appendChild(snapshotXMLObj);
+			//snapshotXMLObj.setAttribute("xmlns", "");
+			return xmlSerializer.serializeToString(rootObj);
+		
+		
 		},
 
 		saveSnapshotToFile: function(name) {
@@ -1149,7 +1128,7 @@ RSCanvas.prototype = {
 			//https://github.com/eligrey/FileSaver.js
 			var filename = name || "data.txt";
 			//if (filename.indexOf(".") == -1) filename += ".txt";
-			saveAs(new Blob([str], {type: "text/plain;charset=utf-8"}), filename);
+			saveAs (new Blob([str], {type: "text/plain;charset=utf-8"}), filename);
 		},
 		
 		parseData: function(data) {
@@ -1157,7 +1136,10 @@ RSCanvas.prototype = {
 			if (DATA_IN_XML) {
 				if (typeof data === "string") data = parseXml(data);
 				console.log("after parsing", data);
-				data = data.getElementsByTagName("downdata")[0];
+				var ddata = data.getElementsByTagName("downdata");
+				if (ddata.length > 0) data = data.getElementsByTagName("downdata")[0];
+				ddata = data.getElementsByTagName("canvas");
+				if (ddata.length > 0) data = data.getElementsByTagName("canvas")[0];
 				console.log("downdata node", data);
 				var transformParsed = false;
 				var pointsParsed = false;
@@ -1415,12 +1397,11 @@ RSCanvas.prototype = {
 		},
 		
 		updateSphereMaterial: function (materialData, rebuildShader) {
-			console.log("updateSphereMaterial", materialData, rebuildShader);
 			if (materialData instanceof ComplexShaderMap) {
+				if (!(this.sphere.material instanceof THREE.ShaderMaterial) )
+					this.sphere.material = this.initShaderMaterial(this.sphere.geometry, materialData);
 				if (rebuildShader) {
 					this.sphere.material.fragmentShader = this.getFragmentShaderString(materialData);
-					//= this.initShaderMaterial(this.sphere.geometry, materialData);
-					console.log("updateSphereMaterial", this.sphere.material.fragmentShader);
 					this.sphere.material.needsUpdate = true;
 				} else {
 					for (var s in materialData.uniforms) {
@@ -1431,8 +1412,6 @@ RSCanvas.prototype = {
 						}
 					}
 				}
-				//console.log("uniforms", this.sphere.material.uniforms);
-				console.log("update sphere material", materialData.initData.config);
 				this.configManager.updateMultiple(materialData.initData.config);
 				this.somethingChanged = true;
 
