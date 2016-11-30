@@ -1,5 +1,9 @@
 RSS := rec(f := fail);
 
+RSS.serve := function(address,port)
+    Exec("node rsserver/rsserver.js < /dev/null &");
+end;
+
 RSS.open := function(address,port)
     local t;
     
