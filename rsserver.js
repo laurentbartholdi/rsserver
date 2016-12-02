@@ -26,6 +26,9 @@ var tcpSocket = null;
 var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	console.log('tcp client connected');
 	tcpSocket = c;
+	var clist = getConnectionsList();
+	console.log("Builded connections list ", clist);
+	if (clist) c.write(clist);
 	c.on('end', function() {
 	    console.log('tcp client disconnected');
 	    tcpSocket = null;
@@ -115,13 +118,9 @@ wss.on('connection', function(ws) {
 	addConnection (ws);
     ws.on('message', function(message) {
 	  console.log("message received", message);//, clients.indexOf(ws));
-	  if (tcpSocket != null) {
-		  processUpData(ws.id, message, function(result) {
-			  console.log("going to send to tcp: " + result);
-			  tcpSocket.write(result + "\n");});
-		 
-		  
-	  }
+	  processUpData(ws.id, message, function(result) {
+		  console.log("going to send to tcp: " + result);
+		  if (tcpSocket) tcpSocket.write(result + "\n");});
          
     });
  
@@ -417,6 +416,32 @@ function processUpData (id, message, callback) {
 
 		
 	});
+}
+function getConnectionsList() {
+
+	if (true) {
+		var list = {updata: {session: []}};
+		for (var w in connections) 
+			if (connections.hasOwnProperty(w) && connections[w]) {
+				var sessionItem = {"$":{}, "window": []};
+				for (var i = 0; i < list.updata.session.length; i++) {
+					if (list.updata.session[i].$ && list.updata.session[i].$.id == connections[w].session)
+						sessionItem = list.updata.session[i];
+				}
+				if (!sessionItem.$.id) {
+					
+					sessionItem.$.id = connections[w].session;
+					list.updata.session.push(sessionItem);
+				}
+				sessionItem.window.push({"$" : {"id" : connections[w].window}});
+				console.log("adding connection", w, sessionItem);
+			}
+		var str = xmlBuilder.buildObject(list);
+		return (str.replace(/"/g, "'") + "\n");
+		
+	} else {
+		return "<updata/>";
+	}
 }
 function displayError(err) {
 	console.error(err);
