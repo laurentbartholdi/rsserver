@@ -204,7 +204,7 @@ var DATA_IN_XML = true;
 				if (showDataBtn)
 					showDataBtn.setAttribute("hidden", "true");
 				if (hideDataBtn)
-					hideDataBtn.setAttribute("hidden", "true")
+					hideDataBtn.setAttribute("hidden", "true");
 			}
 			
 			var showDataBlock = function(){
@@ -251,6 +251,7 @@ var DATA_IN_XML = true;
 				var parentId = dataNode.getAttribute("canvas");
 				var type = dataNode.nodeName;
 				var err = "";
+				
 				if (parentId)  err = addElementToCanvas(parentId, dataNode, resEl);
 				else {
 					//parent is entire window
@@ -332,6 +333,10 @@ var DATA_IN_XML = true;
 				
 			}
 			
+			function addElementsToCanvas(canvasId, dataElement, resEl) {
+				
+			}
+			
 		function sendData (event) {
 			//TODO send valid xml only
 			if (connection) {
@@ -347,7 +352,6 @@ var DATA_IN_XML = true;
 		
 		function onNewData(data) {
 			console.log("on new data "+data);
-			var parsedConfig = {flags: {shader: false, canvasFormat: false, style: false}};
 			var xmlel = parseXml(data);
 			console.log("" + xmlel);
 			var arr;
@@ -358,13 +362,103 @@ var DATA_IN_XML = true;
 				sendError("XML parse error " + xmlel.getElementsByTagName("parsererror")[0]);
 			}
 			var downDataEl = xmlel.getElementsByTagName("downdata")[0];
-			if (!downDataEl)
+			var resEl = createEmptyNode("updata");
+
+			if (!downDataEl) {
 				sendError("No downdata element");
-			else {
+			} else {
 				console.log(downDataEl);
 				
 				var action = downDataEl.getAttribute("action");
-				switch (action) {
+				var objID = downDataEl.getAttribute("object");
+				var parentContainer = null;
+				if (objID && (parentContainer = document.getElementById(objID))) {
+				
+					if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
+						populateCanvas(parentContainer, dataElement);
+					} else if (action == "remove") {
+						parentContainer.parentNode.removeChild(parentContainer);
+					} else if (action == "populate" || action == "update") {
+						var type = parentContainer.getAttribute("contains");
+						if (!type) sendError ("No valid object type with id " + objID);
+						else {
+							var error = "";
+							var container = parentContainer; // backward compatibility
+							switch(type) {
+								case "canvas": {
+									populateCanvas(container, downDataEl);
+									
+									break;
+								}
+								case "text": {
+									if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
+										container.innerHTML = "<p class='server-text'>" + downDataEl.childNodes[0].nodeValue + "</p>";										
+									} else {
+										container.innerHTML = "";
+									}
+									break;
+								}
+								case "button": {
+									var btn = container.getElementsByTagName("input")[0];
+									if (btn) {
+										if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
+											btn.setAttribute("value", downDataEl.childNodes[0].nodeValue)
+										} else {
+											btn.setAttribute("value", objID);
+										}
+										
+									} else {
+										error = "No button with id '" + objID + "' found";
+									}
+									break;
+									}
+									default: {
+										error = "Action 'populate'or 'update' is not valid for '" + type + "' object";
+										break;
+									}
+								}
+								if (!error) {
+									resEl.setAttribute("status", "updated");
+									resEl.setAttribute("object", "objID");
+								}
+								else {
+									sendError(error);
+								}
+							}
+						}	
+						
+					} else if (action == "create") {
+						 if ( downDataEl.getElementsByTagName("window").length > 0){
+							//open new window
+							//TODO allow multiple windows?
+								var session = downDataEl.getAttribute("session");
+								if (!session) sendError ("No session attribute");
+								else {
+									var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
+									window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
+								}
+
+						} else	{
+							//create an object, exsept window, in a window as parent
+							var error = "", i = 0;
+							while (downDataEl.childNodes.length > i && !error){							
+								console.log(downDataEl.childNodes, i);
+								error = addElement(downDataEl.childNodes[i++], resEl);
+							}
+							if (error) {
+								sendError(error);
+							} else {
+								resEl.setAttribute("status", "created");
+								sendData({data:xmlSerializer.serializeToString(resEl)});
+							}
+							
+						}
+					} else {
+							sendError ("No object with id " + objID + " found");
+						}
+					}
+				};
+				/** /switch (action) {
 				case "create":
 					if (downDataEl.getElementsByTagName("window").length > 0)
 						{
@@ -378,7 +472,6 @@ var DATA_IN_XML = true;
 							}
 						}
 					else {
-						var resEl = createEmptyNode("updata");
 						var error = "", i = 0;
 						while (downDataEl.childNodes.length > i && !error){							
 							console.log(downDataEl.childNodes, i);
@@ -392,6 +485,8 @@ var DATA_IN_XML = true;
 						}
 					}
 					break;
+				case "update":
+					//break;
 				case "populate":
 					if (downDataEl.hasAttribute("object")) {
 						var objID = downDataEl.getAttribute("object");
@@ -442,17 +537,15 @@ var DATA_IN_XML = true;
 						sendError("No 'object' attribute");
 					}
 					break;
-				case "update":
-					//break;
 				case "remove":
 					sendError("Sorry, this functionality is not implemented yet");
 
 					break;
 				default:
 					sendError("Invalid action attribute " + action);
-				}
+				}/**/
 				
-			}
+			//}
 			//TODO reuse this code, allowing multiple canvases and other elements
 			//------------
 			/*if (!inited) objectsInit(arr);
@@ -494,7 +587,7 @@ var DATA_IN_XML = true;
 			if (parsedConfig.flags.style) mainCanvasContainer.rsCanvas.updateStyle(parsedConfig); 
 			mainCanvasContainer.rsCanvas.parseData(data);*/
 
-		}
+		//}
 		
 		function updateCanvas (configObj) {
 			mainCanvasContainer.updateCanvas(configObj);
