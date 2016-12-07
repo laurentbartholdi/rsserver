@@ -1,17 +1,8 @@
 //Copyright (c) Anna Alekseeva 2013-2016
-/*On the GAP side:
- * gap
- * LoadPackage("scscp");
- * cs:=InputOutputTCPStream("localhost", 1728);
- * WriteLine( cs, "FUNCTION -1.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0\nCYCLES 0.0 0.0 1 2 -1.0 0.0 0 2 Infinity any 2 1" );
- * ReadLine( cs);//blocks, if there no endOfLine character found
- */
+
 var port = process.argv[3] || 1729;
 var serverUrl = process.argv[2] || "127.0.0.1";
 var tcpPort = process.argv[4] || 1728;
-//is it really in use?
-//No.
-//var defaultDataFileName = process.argv[5] | "/data/example.data";
  
 var http = require("http");
 var path = require("path"); 
@@ -22,7 +13,7 @@ var xml2js = require("xml2js");
 var tcpSocket = null;
 
 
-/**/
+
 var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	console.log('tcp client connected');
 	tcpSocket = c;
@@ -47,26 +38,10 @@ var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	} );
   c.pipe(process.stdout);
 });
-tcpSocketServer.listen(tcpPort, function() { //'listening' listener
+tcpSocketServer.listen(tcpPort, function() { 
   console.log('TCP server is running at localhost, port', tcpPort);
-});/**/
-/** /
-tcpSocket = new net.Socket();
-tcpSocket.connect(tcpPort, '127.0.0.1', function(){ console.log('tcp client connected');}); 
-tcpSocket.on('data', function(data){
-	getTargetId(data, function(id, data, err){
-		console.log("data from tcp server received", id, data, err); 
-		if (err) {
-			tcpSocket.write("<error>" + err + "</error>");
-		} else if ( id && (connections[id] != null)) {
-			connections[id].send(data, {binary: false});
-		} else if (activeWebSocket != null)
-			activeWebSocket.send(data, {binary: false});
-	});
-	
-} );
-tcpSocket.pipe(process.stdout);
-/**/
+});
+
 var WebSocketServer = require('ws').Server;
 var now = new Date();
 console.log(now + " Creating WebSocket server at URL " + serverUrl);
@@ -117,7 +92,7 @@ wss.on('connection', function(ws) {
 
 	addConnection (ws);
     ws.on('message', function(message) {
-	  console.log("message received", message);//, clients.indexOf(ws));
+	  console.log("message received", message);
 	  processUpData(ws.id, message, function(result) {
 		  console.log("going to send to tcp: " + result);
 		  if (tcpSocket) tcpSocket.write(result + "\n");});
@@ -129,8 +104,6 @@ wss.on('connection', function(ws) {
         //Remove the disconnecting client from the list of clients
     });
      
-    //Obsolete
-   //ws.send("<function degree='2'><numer><cn name='1'/><cn /><cn name='i'/></numer><denom degree='0'><cn name='1'/></denom><cycle length='1'><cn name='infinity'/></cycle><cycle length='2'><cn /><cn re='-1' im='1'/></cycle></function>");
 });
 
 //-------------Managing connections-------------
@@ -250,7 +223,7 @@ function processDownData(data, callback){
 			var sId = ""; 
 			var id = "";
 			if (!err) {		
-				if (!resultObj ) err = "invalid xml " + data;//throw "invalid xml " + data;
+				if (!resultObj ) err = "invalid xml " + data;
 				else if (!resultObj.downdata || resultObj.downdata == "empty" || resultObj.downdata[0] == "empty") err = ("invalid xml tag (downdata expected) or empty element" + data);//throw console.error("invalid xml tag (downdata expected) " + data);
 				else if (!resultObj.downdata || !resultObj.downdata.$ || !resultObj.downdata.$.session) {
 					err = "No session id attribute";
@@ -403,7 +376,7 @@ function processUpData (id, message, callback) {
 						else {
 							var i = ws.objects.indexOf(a.object);
 							if (i < 0) err = "No object " + a.object + " is registered in session " + ws.session + ", window " + ws.window;
-							else if (a.status == "removed") a.objects.splice(i, 1);
+							else if (a.status == "removed") ws.objects.splice(i, 1);
 						}
 					}
 				}
@@ -449,26 +422,7 @@ function displayError(err) {
 	if (tcpSocket) tcpSocket.write(err);
 	
 }
-//getTargetId(data, function(id, data){
-/*function getTargetId(data, callback){
-	xml2js.parseString(data, function (err, resultObj){
-		if (err || !resultObj) console.error("Invalid xml or parsing error", err, resultObj); 
-		else {
-		console.log("parsing data", resultObj, err, resultObj.downdata);
-			var id = "";
-			if (!err) {		
-				if (!resultObj ) err = "invalid xml " + data;//throw "invalid xml " + data;
-				else if (!resultObj.downdata) err = ("invalid xml tag (downdata expected) or empty element" + data);//throw console.error("invalid xml tag (downdata expected) " + data);
-				else if (!resultObj.downdata || !resultObj.downdata.$ || !resultObj.downdata.$.session) {
-					console.warn("no session id attribute");
-					id = "";
-				} else id = resultObj.downdata.$.session;
-			}
-		}
-		
-		callback(id, data, err);
-	});
-}*/
+
 
 process.stdin.setEncoding('utf8');
 //TODO config changing in command line
