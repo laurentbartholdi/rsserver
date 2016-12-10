@@ -18,7 +18,7 @@ RSS.open := function(address,port)
         return fail;
     fi;
     
-    RSS.f := IO_WrapFD(t,16384,false);
+    RSS.f := IO_WrapFD(t,false,false);
 end;
 
 RSS.close := function()
@@ -39,10 +39,11 @@ end;
 RSS.recv := function()
     local c, match;
     
-    if not IO_HasData(RSS.f) then
-        return fail;
-    fi;
-    c := IO_Read(RSS.f,6);
+    repeat
+        if not IO_HasData(RSS.f) then return fail; fi;
+        c := IO_Read(RSS.f,1);
+    until not c[1] in WHITESPACE;
+    c := Concatenation(c,IO_Read(RSS.f,5));
     if c="<updat" then
         match := "</updata>";
     elif c="<error" then
@@ -87,3 +88,5 @@ function2xml := function(f)
                        rec(name := "denom", attributes := rec(), content := List(c[2],complex2xml))],
                        List(cycles,c->rec(name := "cycle", attributes := rec(), content := List(c,i->p1point2xml(z[i]))))));
 end;
+
+RSS.open("localhost",1728);
