@@ -6,6 +6,7 @@ var DATA_IN_XML = true;
 		var outputLine; //not in use
 		var curDataObject;//not in use
 		var inited = false;//not in use
+		var winID = ""; //The id of the current window, obtained from the query-string (TODO only if it's not empty)
 		var connection =  null; //A web-socket connection to communicate with rsserver
 		var messageBlock, dataBlock, showDataBtn, hideDataBtn, logView, pageTitle; //Permanent page elements
 		var mCCDOMElement; //The dynamic html-block, to add elements on the commands from the server 
@@ -39,6 +40,7 @@ var DATA_IN_XML = true;
 			handshakeData.appendChild(createEmptyNode("window"));
 			
 			parseQueryStringToXMLAttributes(handshakeData);
+			winID = handshakeData.getAttribute("id");
 			handshakeData = xmlSerializer.serializeToString(handshakeData);
 			console.log("handshakeData", handshakeData);
 			// open connection
@@ -128,6 +130,44 @@ var DATA_IN_XML = true;
 			return err;
 				
 		};
+		
+		function getElementInfo (parentContainer, resEl) {
+			//TODO add position attribute
+			var err = "";
+			var type = parentContainer.getAttribute("contains");
+			if (!type) err = "Invalid element type";
+			else {
+				var resNode = resEl.appendChild(createEmptyNode(type));
+				resNode.setAttribute("id", parentContainer.getAttribute("id"));
+				switch (type) {
+				case "canvas": {
+					//TODO
+					resNode.appendChild(document.createTextNode("Sorry, this functionality is not implemented yet"));
+					break;
+				} case "button": {
+					
+					var btn = parentContainer.getElementsByTagName("input")[0];
+					if (btn) {
+						resNode.setAttribute("name", btn.getAttribute("value"));
+					} else {
+						err = "No button in button container"
+					}
+					
+					break;
+				} case "text": {
+					var p = parentContainer.getElementsByTagName("p")[0];
+					if (p) {
+						var str = p.innerHTML;
+						resNode.appendChild(document.createTextNode(str));
+					} 
+					break;
+				} default: {
+					err = "Type " + type + " is not valid"
+				}
+				}//switch type
+			} //type is present
+			return err;
+		}
 
 		
 		function objectsInit(dataStructureArg /*an array of lines*/) {
@@ -424,6 +464,17 @@ var DATA_IN_XML = true;
 									sendError(error);
 								}
 							}
+						} else if (action == "request") {
+							//TODO
+							resEl.setAttribute("status", "info");
+							resEl.setAttribute("object", objID);
+							var er = getElementInfo (parentContainer, resEl);
+							if (er) sendError (er)
+							else {
+								resEl.setAttribute("status", "info");
+								sendData({data:xmlSerializer.serializeToString(resEl)});
+							}
+							//collecting info about given object
 						}	
 						
 					} else if (action == "create") {
@@ -452,6 +503,21 @@ var DATA_IN_XML = true;
 							}
 							
 						}
+					} else if (action=="request") {
+						//TODO
+						var windowNode = resEl.appendChild(createEmptyNode("window"));
+						var error = "";
+						for (var e in mCCDOMElement.childNodes ) {
+							
+							if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
+								error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
+						}
+						if (error) sendError(error)
+						else {
+							resEl.setAttribute("status", "info");
+							sendData({data:xmlSerializer.serializeToString(resEl)});
+						} 
+							
 					} else {
 							sendError ("No object with id " + objID + " found");
 						}
