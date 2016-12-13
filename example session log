@@ -1,0 +1,42 @@
+gap> cs:=InputOutputTCPStream("localhost", 1728);
+< input/output TCP stream to localhost:1728 >
+gap> ReadLine(cs);
+"<updata><session id='s3'><window id='mmm'/><window id='w0'/></session><session id='s2'><window id='w0'/><window id='neww'/></session><session id='s1'><window id='w0'/></session></updata>\n"
+gap> WriteLine(cs, "<downdata action='request'/>");
+29
+gap> ReadLine(cs);
+"<updata status='info' session='s3' object='w0'><window></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='info' session='s2' object='w0'><window></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='info' session='s3' object='mmm'><window></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='info' session='s1' object='w0'><window></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='info' session='s2' object='neww'><window><canvas id='canvas0'>Sorry, this functionality is not implemented yet</canvas><button id='button0' name='Release ReadLine'/><text id='text0'>This is a window with canvas and button</text></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='button-click' object='button0' session='s2'/>\n"
+gap> WriteLine(cs, "<downdata action='request' session='s2'/>");
+42
+gap> ReadLine(cs);
+"<updata status='info' session='s2' object='w0'><window></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='info' session='s2' object='neww'><window><canvas id='canvas0'>Sorry, this functionality is not implemented yet</canvas><button id='button0' name='Release ReadLine'/><text id='text0'>This is a window with canvas and button</text></window></updata>\n"
+gap> ReadLine(cs);
+"<updata status='button-click' object='button0' session='s2'/>\n"
+gap> WriteLine(cs, "<downdata action='request' session='s2' object='button0'/>");
+59
+gap> ReadLine(cs);
+"<updata status='info' object='button0' session='s2'><button id='button0' name='Release ReadLine'/></updata>\n"
+gap> WriteLine(cs, "<downdata action='remove' session='s2' object='text0'/>");
+56
+gap> ReadLine(cs);
+"<updata status='removed' object='text0' session='s2'/>\n"
+gap> WriteLine(cs, "<downdata action='populate' object='canvas0' session='s2'><function type='newton' degree='3'/></downdata>");
+106
+gap> ReadLine(cs);
+"<updata status='updated' object='canvas0' session='s2'/>\n"
+gap> ReadLine(cs);
+"<updata status='removed' session='s1' object='w0'/>\n"
+gap> 
+
