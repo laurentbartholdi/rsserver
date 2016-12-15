@@ -404,125 +404,128 @@ var DATA_IN_XML = true;
 				
 				var action = downDataEl.getAttribute("action");
 				var objID = downDataEl.getAttribute("object");
-				var parentContainer = null;
-				if (objID && (parentContainer = document.getElementById(objID))) {
-				
-					if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
-						var error = populateCanvas(parentContainer, dataElement, objID);
-						if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
-						else {sendError(error);}
-
-					} else if (action == "remove") {
-						parentContainer.parentNode.removeChild(parentContainer);
-						sendData({data:"<updata status='removed' object='" + objID + "'/>"}); 
-					} else if (action == "populate" || action == "update") {
-						var type = parentContainer.getAttribute("contains");
-						if (!type) sendError ("No valid object type with id " + objID);
-						else {
-							var error = "";
-							var container = parentContainer; // backward compatibility
-							switch(type) {
-								case "canvas": {
-									error = populateCanvas(container, downDataEl, objID);
-									
-									break;
-								}
-								case "text": {
-									if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
-										container.innerHTML = "<p class='server-text'>" + downDataEl.childNodes[0].nodeValue + "</p>";										
-									} else {
-										container.innerHTML = "";
-									}
-									break;
-								}
-								case "button": {
-									var btn = container.getElementsByTagName("input")[0];
-									if (btn) {
-										if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
-											btn.setAttribute("value", downDataEl.childNodes[0].nodeValue)
-										} else {
-											btn.setAttribute("value", objID);
-										}
+				if (!objID && action == "remove") {window.close();}
+				else {
+					var parentContainer = null;
+					if (objID && (parentContainer = document.getElementById(objID))) {
+					
+						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
+							var error = populateCanvas(parentContainer, dataElement, objID);
+							if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
+							else {sendError(error);}
+	
+						} else if (action == "remove") {
+							parentContainer.parentNode.removeChild(parentContainer);
+							sendData({data:"<updata status='removed' object='" + objID + "'/>"}); 
+						} else if (action == "populate" || action == "update") {
+							var type = parentContainer.getAttribute("contains");
+							if (!type) sendError ("No valid object type with id " + objID);
+							else {
+								var error = "";
+								var container = parentContainer; // backward compatibility
+								switch(type) {
+									case "canvas": {
+										error = populateCanvas(container, downDataEl, objID);
 										
-									} else {
-										error = "No button with id '" + objID + "' found";
-									}
-									break;
-									}
-									default: {
-										error = "Action 'populate' or 'update' is not valid for '" + type + "' object";
 										break;
 									}
+									case "text": {
+										if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
+											container.innerHTML = "<p class='server-text'>" + downDataEl.childNodes[0].nodeValue + "</p>";										
+										} else {
+											container.innerHTML = "";
+										}
+										break;
+									}
+									case "button": {
+										var btn = container.getElementsByTagName("input")[0];
+										if (btn) {
+											if (downDataEl.hasChildNodes() && downDataEl.childNodes[0].nodeValue) {
+												btn.setAttribute("value", downDataEl.childNodes[0].nodeValue)
+											} else {
+												btn.setAttribute("value", objID);
+											}
+											
+										} else {
+											error = "No button with id '" + objID + "' found";
+										}
+										break;
+										}
+										default: {
+											error = "Action 'populate' or 'update' is not valid for '" + type + "' object";
+											break;
+										}
+									}
+									if (!error) {
+										resEl.setAttribute("status", "updated");
+										resEl.setAttribute("object", objID);
+										sendData({data:xmlSerializer.serializeToString(resEl)}); 
+	
+									}
+									else {
+										sendError(error);
+									}
 								}
-								if (!error) {
-									resEl.setAttribute("status", "updated");
-									resEl.setAttribute("object", objID);
-									sendData({data:xmlSerializer.serializeToString(resEl)}); 
-
-								}
+							} else if (action == "request") {
+								//TODO
+								resEl.setAttribute("status", "info");
+								resEl.setAttribute("object", objID);
+								var er = getElementInfo (parentContainer, resEl);
+								if (er) sendError (er)
 								else {
-									sendError(error);
+									resEl.setAttribute("status", "info");
+									sendData({data:xmlSerializer.serializeToString(resEl)});
 								}
+								//collecting info about given object
+							}	
+							
+						} else if (action == "create") {
+							 if ( downDataEl.getElementsByTagName("window").length > 0){
+								//open new window
+								//TODO allow multiple windows?
+									var session = downDataEl.getAttribute("session");
+									if (!session) sendError ("No session attribute");
+									else {
+										var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
+										window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
+									}
+	
+							} else	{
+								//create an object, exsept window, in a window as parent
+								var error = "", i = 0;
+								while (downDataEl.childNodes.length > i && !error){							
+									console.log(downDataEl.childNodes, i);
+									error = addElement(downDataEl.childNodes[i++], resEl);
+								}
+								if (error) {
+									sendError(error);
+								} else {
+									resEl.setAttribute("status", "created");
+									sendData({data:xmlSerializer.serializeToString(resEl)});
+								}
+								
 							}
-						} else if (action == "request") {
+						} else if (action=="request") {
 							//TODO
-							resEl.setAttribute("status", "info");
-							resEl.setAttribute("object", objID);
-							var er = getElementInfo (parentContainer, resEl);
-							if (er) sendError (er)
+							var windowNode = resEl.appendChild(createEmptyNode("window"));
+							var error = "";
+							for (var e in mCCDOMElement.childNodes ) {
+								
+								if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
+									error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
+							}
+							if (error) sendError(error)
 							else {
 								resEl.setAttribute("status", "info");
 								sendData({data:xmlSerializer.serializeToString(resEl)});
-							}
-							//collecting info about given object
-						}	
-						
-					} else if (action == "create") {
-						 if ( downDataEl.getElementsByTagName("window").length > 0){
-							//open new window
-							//TODO allow multiple windows?
-								var session = downDataEl.getAttribute("session");
-								if (!session) sendError ("No session attribute");
-								else {
-									var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
-									window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
-								}
-
-						} else	{
-							//create an object, exsept window, in a window as parent
-							var error = "", i = 0;
-							while (downDataEl.childNodes.length > i && !error){							
-								console.log(downDataEl.childNodes, i);
-								error = addElement(downDataEl.childNodes[i++], resEl);
-							}
-							if (error) {
-								sendError(error);
-							} else {
-								resEl.setAttribute("status", "created");
-								sendData({data:xmlSerializer.serializeToString(resEl)});
-							}
-							
-						}
-					} else if (action=="request") {
-						//TODO
-						var windowNode = resEl.appendChild(createEmptyNode("window"));
-						var error = "";
-						for (var e in mCCDOMElement.childNodes ) {
-							
-							if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
-								error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
-						}
-						if (error) sendError(error)
-						else {
-							resEl.setAttribute("status", "info");
-							sendData({data:xmlSerializer.serializeToString(resEl)});
-						} 
-							
-					} else {
-							sendError ("No object with id " + objID + " found");
+							} 
+								
+						} else {
+								sendError ("No object with id " + objID + " found");
 						}
 					}
-				};
+				}
+			};
 		
 		function updateCanvas (configObj) {
 			mainCanvasContainer.updateCanvas(configObj);
