@@ -291,6 +291,7 @@ function processDownData(data, callback){
 						
 							if (curSessionConnections[w].window == a.object) {
 								id = w;
+								if (a.action == "remove") a.object = "";//signal to client to close entire window
 							}
 							else if (curSessionConnections[w].objects) {
 								for (var o in curSessionConnections[w].objects )
