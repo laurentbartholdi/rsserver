@@ -25,23 +25,26 @@ var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	});
 	c.on('data', function(data){
 		processDownData(data, function(id, data, err){
-			if ((!err || err == "null")&& id) {
-				if (id instanceof Array){//broadcast to several connections
-					for (var i = 0; i < id.length; i ++) {
-						if (connections[id[i]] != null) {
-							connections[id[i]].send(data, {binary: false});
-						}//if
-					}//for
-				}// id is array
-				else if (connections[id] != null) {
-					connections[id].send(data, {binary: false});
-				}// valid connection id
-			} else if (id === "") { //broadcast to all connections
-				for (var w in connections)
-					if (connections.hasOwnProperty(w) && connections[w] != null)
-						connections[w].send(data, {binary: false});
+			console.log("downdata processed", id, err, data);
+			if (!err || err == "null") {
+				if (id) {				
+					if (id instanceof Array){//broadcast to several connections
+						for (var i = 0; i < id.length; i ++) {
+							if (connections[id[i]] != null) {
+								connections[id[i]].send(data, {binary: false});
+							}//if
+						}//for
+					}// id is array
+					else if (connections[id] != null) {
+						connections[id].send(data, {binary: false});
+					}// valid connection id
+				} else {
+					for (var w in connections)
+						if (connections.hasOwnProperty(w) && connections[w] != null)
+							connections[w].send(data, {binary: false});
 
-			}//id is empty
+				} //id is empty
+			} //no error
 			else {
 				displayError(err);
 				
@@ -243,13 +246,9 @@ function processDownData(data, callback){
 				else if (!resultObj.downdata || resultObj.downdata == "empty" || resultObj.downdata[0] == "empty") err = ("invalid xml tag (downdata expected) or empty element" + data);//throw console.error("invalid xml tag (downdata expected) " + data);
 				else if (!resultObj.downdata || !resultObj.downdata.$) {
 					err = "No attributes"
-				} else if( !resultObj.downdata.$.session) {
-					if (resultObj.downdata.$.action == "request") {
-						//TODO request about all open sessions
-					} else {
+				} else if( !resultObj.downdata.$.session)  {
+					if( !(resultObj.downdata.$.action == "request"))//only 'request' action is valid without session attribute
 						err = "No session id attribute";
-					}
-						
 				} 
 				else {
 					var a = resultObj.downdata.$;
@@ -263,7 +262,9 @@ function processDownData(data, callback){
 							curSessionConnections[w] = connections[w];
 							curSessionConnectionsNum ++;
 						}
-					if (curSessionConnectionsNum == 0) err = "No connections for session " + a.session + " open";
+					if (curSessionConnectionsNum == 0) {
+						err = "No connections for session " + a.session + " open";
+					}
 					else if (!a.object) {
 						//The only valid cases without object attribute are to create new window or request info about all session windows
 						if (a.action == "create" && resultObj.downdata.hasOwnProperty("window") && resultObj.downdata.window)
@@ -296,6 +297,7 @@ function processDownData(data, callback){
 									if (curSessionConnections[w].objects[o] == a.object)
 										id = w;
 							}
+						console.log("Connection id", id);
 						if (id == "") err = "No registered object " + a.object;
 						else if (a.action == "create"){
 							var usedIds = [];
