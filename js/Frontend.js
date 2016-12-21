@@ -137,34 +137,44 @@ var DATA_IN_XML = true;
 			var type = parentContainer.getAttribute("contains");
 			if (!type) err = "Invalid element type";
 			else {
-				var resNode = resEl.appendChild(createEmptyNode(type));
-				resNode.setAttribute("id", parentContainer.getAttribute("id"));
-				switch (type) {
-				case "canvas": {
-					//TODO
-					resNode.appendChild(document.createTextNode("Sorry, this functionality is not implemented yet"));
-					break;
-				} case "button": {
-					
-					var btn = parentContainer.getElementsByTagName("input")[0];
-					if (btn) {
-						resNode.setAttribute("name", btn.getAttribute("value"));
+				var resNode;
+
+				if (type == "canvas") {
+					if (parentContainer.rscc && parentContainer.rscc.rsCanvas && typeof parentContainer.rscc.rsCanvas.getSnapshotElement === "function") {
+						resNode = parentContainer.rscc.rsCanvas.getSnapshotElement();
 					} else {
-						err = "No button in button container"
+						err = "Error getting canvas information";
 					}
-					
-					break;
-				} case "text": {
-					var p = parentContainer.getElementsByTagName("p")[0];
-					if (p) {
-						var str = p.innerHTML;
-						resNode.appendChild(document.createTextNode(str));
-					} 
-					break;
-				} default: {
-					err = "Type " + type + " is not valid"
+				} else { 
+					resNode = createEmptyNode(type);
+					switch (type) {
+						case "button": {
+							
+							var btn = parentContainer.getElementsByTagName("input")[0];
+							if (btn) {
+								resNode.setAttribute("name", btn.getAttribute("value"));
+							} else {
+								err = "No button in button container"
+							}
+							
+							break;
+						} case "text": {
+							var p = parentContainer.getElementsByTagName("p")[0];
+							if (p) {
+								var str = p.innerHTML;
+								resNode.appendChild(document.createTextNode(str));
+							} 
+							break;
+						} default: {
+							err = "Type " + type + " is not valid"
+						}
+					}//switch type
+				}// type != canvas
+				if (resNode && typeof resNode.setAttribute === "function") {
+					resNode.setAttribute("id", parentContainer.getAttribute("id"));
+					resEl.appendChild(resNode);
 				}
-				}//switch type
+
 			} //type is present
 			return err;
 		}

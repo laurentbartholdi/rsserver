@@ -38,8 +38,8 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		that.configManager.setConfigValue("showArcs", showArcs.checked);
 	}
 	
-	this.saveDrawing = function (event) {
-		event.preventDefault();
+	this.collectData = function (event) {
+		if (event) event.preventDefault();
 		//that.rsCanvas.saveSnapshotToFile((that.rsCanvas.canvas3d.name || that.rsCanvas.rsCanvasId || that.rsCanvas.canvas3d.id) + "_data.txt");
 		var str = that.rsCanvas.getSnapshot();
 		var evt=new CustomEvent("SnapshotSaved", {data: str,  __exposedProps__ : { data : "r"}});
@@ -170,7 +170,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		showLabels.setAttribute("checked", "checked");
 	var td2 = document.createElement("td");
 	td2.setAttribute("valign", "top");
-	addButton(td2, InterfaceNames.SUBMIT, this.saveDrawing);
+	addButton(td2, InterfaceNames.SUBMIT, this.collectData);
 	td2.appendChild(document.createElement("br"));
 	addButton(td2, InterfaceNames.CLEAR_DRAWING, this.clearDrawing);
 	var td3 = document.createElement("td");
