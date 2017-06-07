@@ -2,67 +2,107 @@
 [
 <!ELEMENT window (head*, canvas*, text*, button*)>
 <!ATTLIST window id ID #REQUIRED
-name CDATA #IMPLIED>
+	  name CDATA #IMPLIED>
+
 <!ELEMENT head (#PCDATA)>
+
 <!ELEMENT text (#PCDATA)>
-<!ATTLIST text position CDATA #IMPLIED>
+<!ATTLIST text
+	  position CDATA #IMPLIED>
+
 <!ELEMENT canvas ((function|bitmap)?, point*, arc*, button*)>
 <!ATTLIST canvas 
-geometry (sphere|plane) "sphere" 
-id ID #REQUIRED
-name CDATA #IMPLIED
-width CDATA "800"
-height CDATA "600"
-color CDATA #IMPLIED
-window IDREF #IMPLIED
-position CDATA #IMPLIED>
-
+	  geometry (sphere|plane) "sphere" 
+	  id ID #REQUIRED
+	  name CDATA #IMPLIED
+	  width CDATA "800"
+	  height CDATA "600"
+	  color CDATA #IMPLIED
+	  window IDREF #IMPLIED
+	  position CDATA #IMPLIED>
 
 <!ELEMENT function (numer, denom, cycle+, options*)>
-<!ATTLIST function degree CDATA #REQUIRED>
+<!ATTLIST function
+	  degree CDATA #REQUIRED>
+
 <!ELEMENT options (config*)>
+
 <!ELEMENT config EMPTY>
-<!ATTLIST config key CDATA #REQUIRED value CDATA #REQUIRED>
+<!ATTLIST config
+	  key CDATA #REQUIRED value CDATA #REQUIRED>
+
 <!ELEMENT bitmap (#CDATA)>
+
 <!ELEMENT point (cn, label?)>
-<!ATTLIST point id ID #REQUIRED canvas IDREF #IMPLIED movable (true|false) "true" visible (true|false) "true" color CDATA #IMPLIED>
+<!ATTLIST point
+	  id ID #REQUIRED
+	  canvas IDREF #IMPLIED
+	  movable (true|false) "true"
+	  visible (true|false) "true"
+	  color CDATA #IMPLIED>
+
 <!ELEMENT label (#PCDATA)>
+
 <!ELEMENT arc ((cn+)|(sp+))>
-<!ATTLIST arc id ID #REQUIRED canvas IDREF #IMPLIED color CDATA "0x333399">
+<!ATTLIST arc
+	  id ID #REQUIRED
+	  canvas IDREF #IMPLIED
+	  color CDATA "0x333399">
+
 <!ELEMENT button EMPTY>
 <!ATTLIST button 
-id ID #REQUIRED
-canvas IDREF #IMPLIED
-name CDATA #REQUIRED>
+	  id ID #REQUIRED
+	  canvas IDREF #IMPLIED
+	  name CDATA #REQUIRED>
+
 <!ELEMENT numer (cn+)>
 <!ATTLIST numer degree CDATA #IMPLIED>
 <!ELEMENT denom (cn+)>
 <!ATTLIST degree CDATA #IMPLIED>
 <!ELEMENT cycle (cn+)>
 <!ATTLIST cycle length CDATA "1">
+
 <!ELEMENT cn EMPTY>
+<!-- When no attributes are present, it is zero. When name is present,
+     the other attributes are ignored (name could be Infinity, or I, or 1, etc.).
+  -->
 <!ATTLIST cn 
-re CDATA "0"
-im CDATA "0"
-r CDATA #IMPLIED
-t CDATA #IMPLIED
-name CDATA #IMPLIED>
-<!-- When no attributes are present, it is zero. When name is present, the other attributes are ignored (name could be Infinity, or I, or 1, etc.).-->
-<!ELEMENT sp EMPTY> <!-- a point on the sphere, contains either (x, y, z) coordinates (will be normalized) or spherical angles (theta, phi) as attributes -->
-<!ATTLIST sp x CDATA #IMPLIED y CDATA #IMPLIED z CDATA #IMPLIED
-theta CDATA #IMPLIED phi CDATA #IMPLIED>
+	  re CDATA "0"
+	  im CDATA "0"
+	  r CDATA #IMPLIED
+	  t CDATA #IMPLIED
+	  name CDATA #IMPLIED>
+
+<!ELEMENT sp EMPTY>
+<!-- a point on the sphere, contains either (x, y, z) coordinates
+     (will be normalized) or spherical angles (theta, phi) as attributes
+  -->
+<!ATTLIST sp
+	  x CDATA #IMPLIED y CDATA #IMPLIED z CDATA #IMPLIED
+	  theta CDATA #IMPLIED phi CDATA #IMPLIED>
 
 <!ELEMENT updata ((point|arc|button)|(transform?, rotation?, point*, line*)) >
-<!ATTLIST updata status (created|updated|removed|button-click|error) "updated" session IDREF #REQUIRED>
+<!ATTLIST updata
+	  status (created|updated|removed|button-click|error) "updated"
+	  session IDREF #REQUIRED>
+
 <!ELEMENT downdata ((window|canvas|button|text|function|bitmap|point|arc)|(transform?, rotation?, point*, line*, arc*, config*))>
-<!ATTLIST downdata action (create|populate|remove) "create"
-object IDREF #REQUIRED
-position #IMPLIED
-session IDREF #REQUIRED> 
-<!ELEMENT transform (cn)><!-- must have exactly 4 children, they will be interpreted as coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3) -->
+<!ATTLIST downdata
+	  action (create|populate|remove) "create"
+	  object IDREF #REQUIRED
+	  position #IMPLIED
+	  session IDREF #REQUIRED>
+
+<!ELEMENT transform (cn)>
 <!ELEMENT rotation EMPTY>
+<!-- must have exactly 4 children, they will be interpreted as
+     coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3)
+  -->
 <!ATTLIST rotation
-x CDATA "0" y CDATA "0" z CDATA "0" order (XYZ|YZX|ZXY|XZY|YXZ|ZYX) "XYZ"> <!-- Euler angles -->
+	  x CDATA "0" y CDATA "0" z CDATA "0"
+	  order (XYZ|YZX|ZXY|XZY|YXZ|ZYX) "XYZ">
+<!-- Euler angles -->
+
 <!ELEMENT error PCDATA>
 
 ]>

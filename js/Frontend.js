@@ -46,7 +46,7 @@ var DATA_IN_XML = true;
 			// open connection
 			connection = new WebSocket('ws:' + window.location.host);		
 			connection.onopen = function () {
-				reportStatus("Connection open sucsesfully");
+				reportStatus("Connection successfully open");
 				connection.send(handshakeData);
 			};
 			 

@@ -144,7 +144,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	td01.appendChild(td1);
 	td1.setAttribute("id", "show_grid_controls");
 	var showGrid = addInput(td1, "checkbox", InterfaceNames.SHOW_RE_IM_GRID, "change", this.changeShowGrid);
-	if (this.configManager.getConfigValue("showGrid"))//(RSCanvasContainer.showGridOnStart)
+	if (this.configManager.getConfigValue("showGrid"))
 		showGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	td1.appendChild(document.createTextNode("\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"));
@@ -155,7 +155,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		showDynamicGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	var showAbsGrid = addInput(td1, "checkbox", InterfaceNames.SHOW_ABS_GRID, "change", this.changeShowGrid);
-	if (this.configManager.getConfigValue("showAbsGrid"))//(RSCanvasContainer.showAbsGridOnStart)
+	if (this.configManager.getConfigValue("showAbsGrid"))
 		showAbsGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	td1.appendChild(document.createTextNode("\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"));
@@ -166,7 +166,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		showAbsDynamicGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	var showLabels = addInput(td1, "checkbox", InterfaceNames.SHOW_LABELS, "change", this.changeShowGrid);
-	if (this.configManager.getConfigValue("showLabels"))//(RSCanvasContainer.showLabelsOnStart)
+	if (this.configManager.getConfigValue("showLabels"))
 		showLabels.setAttribute("checked", "checked");
 	var td2 = document.createElement("td");
 	td2.setAttribute("valign", "top");
@@ -256,9 +256,6 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 }
 //console.log("RSCanvasContainer", RSCanvasContainer);
 
-/*RSCanvasContainer.showGridOnStart = true;
-RSCanvasContainer.showAbsGridOnStart = true;
-RSCanvasContainer.showLabelsOnStart = true;*/
 RSCanvasContainer.prototype = {
 		constructor: RSCanvasContainer,
 		rsCanvas: {}
