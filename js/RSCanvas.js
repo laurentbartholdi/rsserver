@@ -736,6 +736,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	this.initShaderMaterial = function(geom, shaderMap) {
 		console.log("initShaderMaterial", arguments);
 		if (!shaderMap) shaderMap = new ComplexShaderMap();
+		this.curShaderMap = shaderMap;
 		sphereShaderAttributes = {
 				c: {type: "v2", value: []},
 				scale: {type: "f", value: []},
@@ -756,8 +757,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		var shaderMaterial = new THREE.ShaderMaterial({
 			  attributes: sphereShaderAttributes,
 			  uniforms:uniforms,
-			  vertexShader: vertexShaderString,//document.getElementById('vertexShader').textContent,
-			  fragmentShader: this.getFragmentShaderString(shaderMap),//document.getElementById('fragmentShader').textContent,
+			  vertexShader: vertexShaderString,
+			  fragmentShader: this.getFragmentShaderString(shaderMap),
 			  lights: true
 			  });
 		shaderMaterial.complexShaderMap = shaderMap;
@@ -1085,15 +1086,22 @@ RSCanvas.prototype = {
 		
 
 		getSnapshot: function() {
-			//TODO Where to add canvas id?
 			//TODO make this not when submit button pressed, but when mouse button is released
+			var snapshotXMLObj = this.getSnapshotElement();
+			var rootObj = createEmptyNode("updata");
+			if (this.serverId) rootObj.setAttribute("object", this.serverId);
+			rootObj.appendChild(snapshotXMLObj);
+			return xmlSerializer.serializeToString(rootObj);
+		
+		
+		},
+		getSnapshotElement: function() {
 			var snapshotXMLObj = createEmptyNode("canvas");
 			var rotEl = createEmptyNode("rotation");
 			rotEl.setAttribute("x", this.sphere.rotation.x);
 			rotEl.setAttribute("y", this.sphere.rotation.y);
 			rotEl.setAttribute("z", this.sphere.rotation.z);
 			rotEl.setAttribute("order", this.sphere.rotation.order);
-			//snapshotXMLObj.childNodes = [];
 			snapshotXMLObj.appendChild(rotEl);
 			
 			var transformEl = createEmptyNode("transform");
@@ -1114,13 +1122,13 @@ RSCanvas.prototype = {
 					lineXMLObj.appendChild(drw[i][j].toXMLObj());
 				}
 			}
-			var rootObj = createEmptyNode("updata");
-			if (this.serverId) rootObj.setAttribute("object", this.serverId);
-			rootObj.appendChild(snapshotXMLObj);
-			//snapshotXMLObj.setAttribute("xmlns", "");
-			return xmlSerializer.serializeToString(rootObj);
-		
-		
+			if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
+				if (this.funcXML) {
+						snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
+				}
+			}
+			return snapshotXMLObj;
+			
 		},
 
 		saveSnapshotToFile: function(name) {
@@ -1398,6 +1406,7 @@ RSCanvas.prototype = {
 		
 		updateSphereMaterial: function (materialData, rebuildShader) {
 			if (materialData instanceof ComplexShaderMap) {
+				if (materialData.initData && materialData.initData.xml ) this.funcXML = materialData.initData.xml;
 				if (!(this.sphere.material instanceof THREE.ShaderMaterial) )
 					this.sphere.material = this.initShaderMaterial(this.sphere.geometry, materialData);
 				if (rebuildShader) {

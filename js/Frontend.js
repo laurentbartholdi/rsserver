@@ -1,17 +1,19 @@
 //Copyright (c) Anna Alekseeva 2013-2016
 var DATA_IN_XML = true;
 
-		var mainCanvasContainer;//, infoIC;
-		var mainShaderMap;
-		var outputLine;
-		var curDataObject;
-		var inited = false;
-		var connection =  null;
-		var messageBlock, dataBlock, showDataBtn, hideDataBtn, logView, pageTitle;
-		var mCCDOMElement;
-		var pageDataXML;
+		var mainCanvasContainer;//not in use
+		var mainShaderMap;//not in use
+		var outputLine; //not in use
+		var curDataObject;//not in use
+		var inited = false;//not in use
+		var winID = ""; //The id of the current window, obtained from the query-string (TODO only if it's not empty)
+		var connection =  null; //A web-socket connection to communicate with rsserver
+		var messageBlock, dataBlock, showDataBtn, hideDataBtn, logView, pageTitle; //Permanent page elements
+		var mCCDOMElement; //The dynamic html-block, to add elements on the commands from the server 
+		var pageDataXML; //XML element to store data about the page structure and send to server by request. Not implemented yet
 		 
 		function pageInit() {
+			//Executes when the html-page is loaded
 			console.log("page init launched");
 			pageDataXML = document.createElement("window");
 
@@ -38,12 +40,13 @@ var DATA_IN_XML = true;
 			handshakeData.appendChild(createEmptyNode("window"));
 			
 			parseQueryStringToXMLAttributes(handshakeData);
+			winID = handshakeData.getAttribute("id");
 			handshakeData = xmlSerializer.serializeToString(handshakeData);
 			console.log("handshakeData", handshakeData);
 			// open connection
 			connection = new WebSocket('ws:' + window.location.host);		
 			connection.onopen = function () {
-				reportStatus("Connection open sucsesfully");
+				reportStatus("Connection successfully open");
 				connection.send(handshakeData);
 			};
 			 
@@ -79,19 +82,19 @@ var DATA_IN_XML = true;
 					surfaceData, 
 					canvasData, 
 					dataElement.getAttribute("id") + "_internal");
-			var outputLine = document.createElement('div');
+			var outputLine = document.createElement('div'); //The output of the function formula
 			outputLine.setAttribute("class", "output-line");
 			outputLine.setAttribute("id", dataElement.getAttribute("id") + "_output");
 			pageElement.appendChild(outputLine);
 			pageElement.outputLine = outputLine;
 			if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
 				pageElement.rscc = rscc;
-				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData);
+				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
 			}
 			else return "Error creating canvas";
 			
 			if (dataElement.hasChildNodes) {
-				populateCanvas(pageElement, dataElement);
+				populateCanvas(pageElement, dataElement, dataElement.getAttribute("id"));
 			}
 			
 			return ""; //no errors
@@ -108,7 +111,8 @@ var DATA_IN_XML = true;
 			
 		}
 		
-		function populateCanvas(container, dataElement){
+		function populateCanvas(container, dataElement, cId){
+			var err = "";
 			if (container.getAttribute("contains") == "canvas" && container.rscc && container.rscc.rsCanvas){
 				if (dataElement.getElementsByTagName("function").length > 0) {
 					var dataStructure = xmlToStrings(dataElement); //in DataParser.js
@@ -119,27 +123,65 @@ var DATA_IN_XML = true;
 					getOutputDomElement(dataObject, container.outputLine, 3);
 				}
 				container.rscc.rsCanvas.parseData(dataElement);
-				/** /
-				function applyMap(newData) {
-					console.log("apply map");
-					var newMap = initJuliaMap(newData, mainShaderMap);
-					
-					mainShaderMap = newMap;
-					mainShaderMap.updateUniformsDeclaration();
-					mainCanvasContainer.rsCanvas.updateSphereMaterial(mainShaderMap, true);
-					curDataObject = parseJuliaData(newData);
-					getOutputDomElement(curDataObject, outputLine, 3);
-					
-				}				 /**/
+
 			} else {
-				sendError("Invalid canvas container");
+				err = "Invalid canvas container";
 			}
+			return err;
 				
 		};
+		
+		function getElementInfo (parentContainer, resEl) {
+			//TODO add position attribute
+			var err = "";
+			var type = parentContainer.getAttribute("contains");
+			if (!type) err = "Invalid element type";
+			else {
+				var resNode;
+
+				if (type == "canvas") {
+					if (parentContainer.rscc && parentContainer.rscc.rsCanvas && typeof parentContainer.rscc.rsCanvas.getSnapshotElement === "function") {
+						resNode = parentContainer.rscc.rsCanvas.getSnapshotElement();
+					} else {
+						err = "Error getting canvas information";
+					}
+				} else { 
+					resNode = createEmptyNode(type);
+					switch (type) {
+						case "button": {
+							
+							var btn = parentContainer.getElementsByTagName("input")[0];
+							if (btn) {
+								resNode.setAttribute("name", btn.getAttribute("value"));
+							} else {
+								err = "No button in button container"
+							}
+							
+							break;
+						} case "text": {
+							var p = parentContainer.getElementsByTagName("p")[0];
+							if (p) {
+								var str = p.innerHTML;
+								resNode.appendChild(document.createTextNode(str));
+							} 
+							break;
+						} default: {
+							err = "Type " + type + " is not valid"
+						}
+					}//switch type
+				}// type != canvas
+				if (resNode && typeof resNode.setAttribute === "function") {
+					resNode.setAttribute("id", parentContainer.getAttribute("id"));
+					resEl.appendChild(resNode);
+				}
+
+			} //type is present
+			return err;
+		}
 
 		
 		function objectsInit(dataStructureArg /*an array of lines*/) {
-		//!!!
+		//Not in use anymore, just parts of code for reference (or to be reused)
 			var dataStructure;
 			var xmlel = parseXml(dataStructureArg.join(""));
 			console.log(xmlel);
@@ -179,78 +221,79 @@ var DATA_IN_XML = true;
 			
 	}
 			
-			
-			var showData = function() {
-				if (dataBlock)
-					dataBlock.removeAttribute('hidden');
-				if (hideDataBtn)
-					hideDataBtn.removeAttribute('hidden');
-				if (showDataBtn)
-					showDataBtn.setAttribute('hidden', 'true');
-			}
-			var hideData = function() {
-				if (dataBlock)
-					dataBlock.setAttribute('hidden', 'true');
-				if (hideDataBtn)
-					hideDataBtn.setAttribute('hidden', 'true');
-				if (showDataBtn)
-					showDataBtn.removeAttribute('hidden');
-			}
-			var clearDataBlock = function() {
-				if (dataBlock) {
-					dataBlock.innerHTML = "";
-					dataBlock.setAttribute("hidden", "true");
-				}
-				if (showDataBtn)
-					showDataBtn.setAttribute("hidden", "true");
-				if (hideDataBtn)
-					hideDataBtn.setAttribute("hidden", "true")
-			}
-			
-			var showDataBlock = function(){
-				if(showDataBtn && hideDataBtn && hideDataBtn.getAttribute("hidden")) showDataBtn.removeAttribute("hidden");
-			}
-			function createLogView() {
-				var logView = document.createElement('div');
-				logView.setAttribute("id", "log_view");
-				messageBlock = document.createElement("div");
-				logView.appendChild(messageBlock);
-				messageBlock.setAttribute("id", "messages");
-				messageBlock.innerHTML = "Waiting for connection...";
-				dataBlock = document.createElement("div");
-				dataBlock.setAttribute("id", "data_view");
+		//------Event handlers for permanet page elements-------------
+		var showData = function() {
+			if (dataBlock)
+				dataBlock.removeAttribute('hidden');
+			if (hideDataBtn)
+				hideDataBtn.removeAttribute('hidden');
+			if (showDataBtn)
+				showDataBtn.setAttribute('hidden', 'true');
+		}
+		var hideData = function() {
+			if (dataBlock)
+				dataBlock.setAttribute('hidden', 'true');
+			if (hideDataBtn)
+				hideDataBtn.setAttribute('hidden', 'true');
+			if (showDataBtn)
+				showDataBtn.removeAttribute('hidden');
+		}
+		var clearDataBlock = function() {
+			if (dataBlock) {
+				dataBlock.innerHTML = "";
 				dataBlock.setAttribute("hidden", "true");
-				dataBlock.innerHTML = "test data";
-				showDataBtn = document.createElement("button");
-				var showBtn = showDataBtn;
-				showBtn.setAttribute("id", "show_data_btn");
-				//showBtn.setAttribute("disabled", "true");
-				showBtn.addEventListener("click", showData);
-				showBtn.appendChild(document.createTextNode("Show data"));
-				hideDataBtn = document.createElement("button");
-				var hideBtn = hideDataBtn;
-				hideBtn.setAttribute("hidden", "true");
-				hideBtn.addEventListener("click", hideData);
-				hideBtn.appendChild(document.createTextNode("Hide data"));
-				logView.appendChild(showBtn);
-				logView.appendChild(hideBtn);
-				logView.appendChild(dataBlock);
-				clearDataBlock();
-				return logView;
-				
-				
 			}
+			if (showDataBtn)
+				showDataBtn.setAttribute("hidden", "true");
+			if (hideDataBtn)
+				hideDataBtn.setAttribute("hidden", "true");
+		}
+		
+		var showDataBlock = function(){
+			if(showDataBtn && hideDataBtn && hideDataBtn.getAttribute("hidden")) showDataBtn.removeAttribute("hidden");
+		}
+		function createLogView() {
+			var logView = document.createElement('div');
+			logView.setAttribute("id", "log_view");
+			messageBlock = document.createElement("div");
+			logView.appendChild(messageBlock);
+			messageBlock.setAttribute("id", "messages");
+			messageBlock.innerHTML = "Waiting for connection...";
+			dataBlock = document.createElement("div");
+			dataBlock.setAttribute("id", "data_view");
+			dataBlock.setAttribute("hidden", "true");
+			dataBlock.innerHTML = "test data";
+			showDataBtn = document.createElement("button");
+			var showBtn = showDataBtn;
+			showBtn.setAttribute("id", "show_data_btn");
+			//showBtn.setAttribute("disabled", "true");
+			showBtn.addEventListener("click", showData);
+			showBtn.appendChild(document.createTextNode("Show data"));
+			hideDataBtn = document.createElement("button");
+			var hideBtn = hideDataBtn;
+			hideBtn.setAttribute("hidden", "true");
+			hideBtn.addEventListener("click", hideData);
+			hideBtn.appendChild(document.createTextNode("Hide data"));
+			logView.appendChild(showBtn);
+			logView.appendChild(hideBtn);
+			logView.appendChild(dataBlock);
+			clearDataBlock();
+			return logView;
 			
+			
+		}
+		//---------------------------------
 			
 			
 			function addElement (dataNode, resEl) {
 				console.log("Adding element ", dataNode);
 				//returns error string or nothing, if everething is Ok
 				//resEl - <updata> to send response to server. Description of created element should be added here
-				//TODO create listed elements in an existing window
+				//TODO create list of elements in an existing window
 				var parentId = dataNode.getAttribute("canvas");
 				var type = dataNode.nodeName;
 				var err = "";
+				
 				if (parentId)  err = addElementToCanvas(parentId, dataNode, resEl);
 				else {
 					//parent is entire window
@@ -311,6 +354,7 @@ var DATA_IN_XML = true;
 				return err;
 			}
 			function addElementToCanvas(canvasId, dataNode, resEl) {
+				//TODO
 				var type = dataNode.nodeName;
 				//the object should be attached to a canvas
 				switch (type) {
@@ -332,6 +376,10 @@ var DATA_IN_XML = true;
 				
 			}
 			
+			function addElementsToCanvas(canvasId, dataElement, resEl) {
+				
+			}
+			
 		function sendData (event) {
 			//TODO send valid xml only
 			if (connection) {
@@ -347,7 +395,6 @@ var DATA_IN_XML = true;
 		
 		function onNewData(data) {
 			console.log("on new data "+data);
-			var parsedConfig = {flags: {shader: false, canvasFormat: false, style: false}};
 			var xmlel = parseXml(data);
 			console.log("" + xmlel);
 			var arr;
@@ -358,53 +405,37 @@ var DATA_IN_XML = true;
 				sendError("XML parse error " + xmlel.getElementsByTagName("parsererror")[0]);
 			}
 			var downDataEl = xmlel.getElementsByTagName("downdata")[0];
-			if (!downDataEl)
+			var resEl = createEmptyNode("updata");
+
+			if (!downDataEl) {
 				sendError("No downdata element");
-			else {
+			} else {
 				console.log(downDataEl);
 				
 				var action = downDataEl.getAttribute("action");
-				switch (action) {
-				case "create":
-					if (downDataEl.getElementsByTagName("window").length > 0)
-						{
-						//open new window
-						//TODO allow multiple windows?
-							var session = downDataEl.getAttribute("session");
-							if (!session) sendError ("No session attribute");
-							else {
-								var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
-								window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
-							}
-						}
-					else {
-						var resEl = createEmptyNode("updata");
-						var error = "", i = 0;
-						while (downDataEl.childNodes.length > i && !error){							
-							console.log(downDataEl.childNodes, i);
-							error = addElement(downDataEl.childNodes[i++], resEl);
-						}
-						if (error) {
-							sendError(error);
-						} else {
-							resEl.setAttribute("status", "created");
-							sendData({data:xmlSerializer.serializeToString(resEl)});
-						}
-					}
-					break;
-				case "populate":
-					if (downDataEl.hasAttribute("object")) {
-						var objID = downDataEl.getAttribute("object");
-						var container = document.getElementById(objID);
-						console.log("container", container);
-						if (!container) sendError ("No object with id " + objID + " found");
-						else {
-							var type = container.getAttribute("contains");
+				var objID = downDataEl.getAttribute("object");
+				if (!objID && action == "remove") {window.close();}
+				else {
+					var parentContainer = null;
+					if (objID && (parentContainer = document.getElementById(objID))) {
+					
+						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
+							var error = populateCanvas(parentContainer, dataElement, objID);
+							if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
+							else {sendError(error);}
+	
+						} else if (action == "remove") {
+							parentContainer.parentNode.removeChild(parentContainer);
+							sendData({data:"<updata status='removed' object='" + objID + "'/>"}); 
+						} else if (action == "populate" || action == "update") {
+							var type = parentContainer.getAttribute("contains");
 							if (!type) sendError ("No valid object type with id " + objID);
 							else {
+								var error = "";
+								var container = parentContainer; // backward compatibility
 								switch(type) {
 									case "canvas": {
-										populateCanvas(container, downDataEl);
+										error = populateCanvas(container, downDataEl, objID);
 										
 										break;
 									}
@@ -426,75 +457,85 @@ var DATA_IN_XML = true;
 											}
 											
 										} else {
-											sendError("No button with id '" + objID + "' found")
+											error = "No button with id '" + objID + "' found";
 										}
 										break;
+										}
+										default: {
+											error = "Action 'populate' or 'update' is not valid for '" + type + "' object";
+											break;
+										}
 									}
-									default: {
-										sendError ("Action 'populate' is not valid for '" + type + "' object");
-										break;
+									if (!error) {
+										resEl.setAttribute("status", "updated");
+										resEl.setAttribute("object", objID);
+										sendData({data:xmlSerializer.serializeToString(resEl)}); 
+	
+									}
+									else {
+										sendError(error);
 									}
 								}
+							} else if (action == "request") {
+								//TODO
+								resEl.setAttribute("status", "info");
+								resEl.setAttribute("object", objID);
+								var er = getElementInfo (parentContainer, resEl);
+								if (er) sendError (er)
+								else {
+									resEl.setAttribute("status", "info");
+									sendData({data:xmlSerializer.serializeToString(resEl)});
+								}
+								//collecting info about given object
+							}	
+							
+						} else if (action == "create") {
+							 if ( downDataEl.getElementsByTagName("window").length > 0){
+								//open new window
+								//TODO allow multiple windows?
+									var session = downDataEl.getAttribute("session");
+									if (!session) sendError ("No session attribute");
+									else {
+										var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
+										window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
+									}
+	
+							} else	{
+								//create an object, exsept window, in a window as parent
+								var error = "", i = 0;
+								while (downDataEl.childNodes.length > i && !error){							
+									console.log(downDataEl.childNodes, i);
+									error = addElement(downDataEl.childNodes[i++], resEl);
+								}
+								if (error) {
+									sendError(error);
+								} else {
+									resEl.setAttribute("status", "created");
+									sendData({data:xmlSerializer.serializeToString(resEl)});
+								}
+								
 							}
+						} else if (action=="request") {
+							//TODO
+							var windowNode = resEl.appendChild(createEmptyNode("window"));
+							var error = "";
+							for (var e in mCCDOMElement.childNodes ) {
+								
+								if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
+									error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
+							}
+							if (error) sendError(error)
+							else {
+								resEl.setAttribute("status", "info");
+								sendData({data:xmlSerializer.serializeToString(resEl)});
+							} 
+								
+						} else {
+								sendError ("No object with id " + objID + " found");
 						}
-						
-					} else {
-						sendError("No 'object' attribute");
-					}
-					break;
-				case "update":
-					//break;
-				case "remove":
-					sendError("Sorry, this functionality is not implemented yet");
-
-					break;
-				default:
-					sendError("Invalid action attribute " + action);
-				}
-				
-			}
-			//TODO reuse this code, allowing multiple canvases and other elements
-			//------------
-			/*if (!inited) objectsInit(arr);
-			else {
-				var line;
-				for (var i = 0; i < arr.length; i++) {
-					line = arr[i].split(" ");
-					switch (line[0].toLowerCase()) {
-					case "function":
-					case "cycles": {
-						parsedConfig.flags.shader = true;
-						break;
-					}
-					case "config": {
-						switch (line[1].toLowerCase()) {
-						case "get": {
-							var val = mainCanvasContainer.configManager.getConfigValueString(line[2]);
-							if (connection)
-								connection.send(val);
-							//sendData (new Event({data: line[1] + " " + val}));
-						}
-						case "save":
-						case "load": {
-							break;
-						}
-						case "set":
-							ConfigManager.parseString(line, parsedConfig);	
-							console.log("frontend parser", parsedConfig, parsedConfig.flags);
-						}
-					}
-					
 					}
 				}
-			}
-			//----------------------------------
-			//TODO do something with arcs and points...
-			if (parsedConfig.flags.shader) applyMap(arr);
-			if (parsedConfig.flags.canvasFormat) updateCanvas(parsedConfig); 
-			if (parsedConfig.flags.style) mainCanvasContainer.rsCanvas.updateStyle(parsedConfig); 
-			mainCanvasContainer.rsCanvas.parseData(data);*/
-
-		}
+			};
 		
 		function updateCanvas (configObj) {
 			mainCanvasContainer.updateCanvas(configObj);
@@ -502,6 +543,7 @@ var DATA_IN_XML = true;
 		
 		
 		function applyMap(newData) {
+			//Not in use
 			console.log("apply map");
 			var newMap = initJuliaMap(newData, mainShaderMap);
 			

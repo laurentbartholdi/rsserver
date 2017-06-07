@@ -189,8 +189,9 @@ function parseJuliaData(data, resObj) {
 	if (!cyclesParsed) console.warn("No CYCLES entry");
 	if (!configParsed) console.warn("No CONFIG entry");
 	//if (!imageParsed) console.warn("No IMAGE entry");
-	
+	addInfoField(res);
 	console.log("Julia data parsed", res);
+	
     
     return res;
 }
@@ -243,4 +244,48 @@ function parseCycles(line, res) {
 function parseImage(line, res) {
 	res.dz0 = 4./parseFloat(line[1]);
 	res.maxiter = parseInt(line[2]);
+}
+
+function vectorsToXML (arr, tag, offset, length) {
+	var res = typeof tag === "string" ? createEmptyNode(tag) : tag;
+	var o = offset ? offset : 0;
+	var l = length ? length + o: arr.length;
+	for (var i = o; i < l && i < arr.length; i ++) {
+		res.appendChild(vectorToCN(arr[i]));
+	}
+	return res;
+}
+
+function vectorToCN (v, resEl) {
+	var cn = resEl ? resEl : createEmptyNode("cn");
+	cn.setAttribute("re", v.x);
+	cn.setAttribute("im", v.y);
+	return cn;
+	
+}
+
+function cyclesToXML (dataObj, resEl) {
+	var res = resEl ? resEl : createEmptyNode("cycles");
+	var k = 0;
+	while (k < dataObj.cyclelen) {
+		var cEl = res.appendChild(createEmptyNode("cycle"));
+		var p = dataObj.cycleperiod[k];
+		cEl.setAttribute("length", p);
+		vectorsToXML(dataObj.cycle, cEl, k, p);
+		k+=p;
+	}
+	return res;
+	
+}
+
+function addInfoField(dataObj) {
+	//TODO add configs
+	var resEl = createEmptyNode("function");
+	resEl.setAttribute("degree", dataObj.degree);
+	resEl.appendChild(vectorsToXML (dataObj.num, "numer"));
+	resEl.appendChild(vectorsToXML (dataObj.den, "denom"));
+	cyclesToXML(dataObj, resEl);
+	dataObj.xml = resEl;
+	return resEl;
+	
 }

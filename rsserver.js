@@ -1,17 +1,8 @@
 //Copyright (c) Anna Alekseeva 2013-2016
-/*On the GAP side:
- * gap
- * LoadPackage("scscp");
- * cs:=InputOutputTCPStream("localhost", 1728);
- * WriteLine( cs, "FUNCTION -1.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0\nCYCLES 0.0 0.0 1 2 -1.0 0.0 0 2 Infinity any 2 1" );
- * ReadLine( cs);//blocks, if there no endOfLine character found
- */
+
 var port = process.argv[3] || 1729;
 var serverUrl = process.argv[2] || "127.0.0.1";
 var tcpPort = process.argv[4] || 1728;
-//is it really in use?
-//No.
-//var defaultDataFileName = process.argv[5] | "/data/example.data";
  
 var http = require("http");
 var path = require("path"); 
@@ -22,20 +13,39 @@ var xml2js = require("xml2js");
 var tcpSocket = null;
 
 
-/**/
+
 var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	console.log('tcp client connected');
 	tcpSocket = c;
+	var clist = getConnectionsList();
+	if (clist) c.write(clist);
 	c.on('end', function() {
 	    console.log('tcp client disconnected');
 	    tcpSocket = null;
 	});
 	c.on('data', function(data){
 		processDownData(data, function(id, data, err){
-			//console.log("data from tcp client processed", id, connections[id] != null, data, err, err==null); 
-			if ((!err || err == "null")&& id && (connections[id] != null)) {
-				connections[id].send(data, {binary: false});
-			} else {
+			console.log("downdata processed", id, err, data);
+			if (!err || err == "null") {
+				if (id) {				
+					if (id instanceof Array){//broadcast to several connections
+						for (var i = 0; i < id.length; i ++) {
+							if (connections[id[i]] != null) {
+								connections[id[i]].send(data, {binary: false});
+							}//if
+						}//for
+					}// id is array
+					else if (connections[id] != null) {
+						connections[id].send(data, {binary: false});
+					}// valid connection id
+				} else {
+					for (var w in connections)
+						if (connections.hasOwnProperty(w) && connections[w] != null)
+							connections[w].send(data, {binary: false});
+
+				} //id is empty
+			} //no error
+			else {
 				displayError(err);
 				
 			}
@@ -44,26 +54,10 @@ var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	} );
   c.pipe(process.stdout);
 });
-tcpSocketServer.listen(tcpPort, function() { //'listening' listener
+tcpSocketServer.listen(tcpPort, function() { 
   console.log('TCP server is running at localhost, port', tcpPort);
-});/**/
-/** /
-tcpSocket = new net.Socket();
-tcpSocket.connect(tcpPort, '127.0.0.1', function(){ console.log('tcp client connected');}); 
-tcpSocket.on('data', function(data){
-	getTargetId(data, function(id, data, err){
-		console.log("data from tcp server received", id, data, err); 
-		if (err) {
-			tcpSocket.write("<error>" + err + "</error>");
-		} else if ( id && (connections[id] != null)) {
-			connections[id].send(data, {binary: false});
-		} else if (activeWebSocket != null)
-			activeWebSocket.send(data, {binary: false});
-	});
-	
-} );
-tcpSocket.pipe(process.stdout);
-/**/
+});
+
 var WebSocketServer = require('ws').Server;
 var now = new Date();
 console.log(now + " Creating WebSocket server at URL " + serverUrl);
@@ -114,14 +108,10 @@ wss.on('connection', function(ws) {
 
 	addConnection (ws);
     ws.on('message', function(message) {
-	  console.log("message received", message);//, clients.indexOf(ws));
-	  if (tcpSocket != null) {
-		  processUpData(ws.id, message, function(result) {
-			  console.log("going to send to tcp: " + result);
-			  tcpSocket.write(result + "\n");});
-		 
-		  
-	  }
+	  console.log("message received", message);
+	  processUpData(ws.id, message, function(result) {
+		  console.log("going to send to tcp: " + result);
+		  if (tcpSocket) tcpSocket.write(result + "\n");});
          
     });
  
@@ -130,8 +120,6 @@ wss.on('connection', function(ws) {
         //Remove the disconnecting client from the list of clients
     });
      
-    //Obsolete
-   //ws.send("<function degree='2'><numer><cn name='1'/><cn /><cn name='i'/></numer><denom degree='0'><cn name='1'/></denom><cycle length='1'><cn name='infinity'/></cycle><cycle length='2'><cn /><cn re='-1' im='1'/></cycle></function>");
 });
 
 //-------------Managing connections-------------
@@ -164,6 +152,9 @@ function getConnectionId (ws) {
 }
 function removeConnection (ws) {
 	console.log ("Closing connection " + ws.id);
+	var dataObj = {updata: {$: {status: "removed", session: ws.session, object: ws.window}}};
+	var str = xmlBuilder.buildObject(dataObj).replace(/"/g, "'") + "\n"; 
+	if (tcpSocket) tcpSocket.write(str);
 	connections[ws.id] = null;
 	connectionsNum --;
 	if (activeWebSocket == ws) {
@@ -251,15 +242,18 @@ function processDownData(data, callback){
 			var sId = ""; 
 			var id = "";
 			if (!err) {		
-				if (!resultObj ) err = "invalid xml " + data;//throw "invalid xml " + data;
+				if (!resultObj ) err = "invalid xml " + data;
 				else if (!resultObj.downdata || resultObj.downdata == "empty" || resultObj.downdata[0] == "empty") err = ("invalid xml tag (downdata expected) or empty element" + data);//throw console.error("invalid xml tag (downdata expected) " + data);
-				else if (!resultObj.downdata || !resultObj.downdata.$ || !resultObj.downdata.$.session) {
-					err = "No session id attribute";
-					
-				} else {
+				else if (!resultObj.downdata || !resultObj.downdata.$) {
+					err = "No attributes"
+				} else if( !resultObj.downdata.$.session)  {
+					if( !(resultObj.downdata.$.action == "request"))//only 'request' action is valid without session attribute
+						err = "No session id attribute";
+				} 
+				else {
 					var a = resultObj.downdata.$;
 					a.action = a.action || "create";
-					if (!(a.action == "create" || a.action == "update" || a.action == "populate" || a.action == "remove"))
+					if (!(a.action == "create" || a.action == "update" || a.action == "populate" || a.action == "remove" || a.action == "request"))
 						err = "Invalid action attribute " + a.action;
 					var curSessionConnections = {};
 					var curSessionConnectionsNum = 0;
@@ -268,31 +262,43 @@ function processDownData(data, callback){
 							curSessionConnections[w] = connections[w];
 							curSessionConnectionsNum ++;
 						}
-					if (curSessionConnectionsNum == 0) err = "No connections for session " + a.session + " open";
-						
+					if (curSessionConnectionsNum == 0) {
+						err = "No connections for session " + a.session + " open";
+					}
 					else if (!a.object) {
-						//The only valid case without object attribute is to create new window
+						//The only valid cases without object attribute are to create new window or request info about all session windows
 						if (a.action == "create" && resultObj.downdata.hasOwnProperty("window") && resultObj.downdata.window)
-							{
+						{
 							if (resultObj.downdata.window == "empty") resultObj.downdata.window = { $:""};
 							for (var w in curSessionConnections)
 								if (curSessionConnections.hasOwnProperty(w) && curSessionConnections[w])
 									{id = w;}
 							if (id == "") err = "No registered session " + a.session;
-							}
+						} //create new window in given session
+						else if (a.action == "request") {
+							id = [];
+							for (var w in curSessionConnections)
+								if (curSessionConnections.hasOwnProperty(w) && curSessionConnections[w])
+									{id.push(w)}
+							
+							
+						} //request without object attribute
 						else err = "No object attribute";
 								
-					} else {
+					} //no object attribute 
+					else {
 						for (var w in curSessionConnections)
 						
 							if (curSessionConnections[w].window == a.object) {
 								id = w;
+								if (a.action == "remove") a.object = "";//signal to client to close entire window
 							}
 							else if (curSessionConnections[w].objects) {
 								for (var o in curSessionConnections[w].objects )
 									if (curSessionConnections[w].objects[o] == a.object)
 										id = w;
 							}
+						console.log("Connection id", id);
 						if (id == "") err = "No registered object " + a.object;
 						else if (a.action == "create"){
 							var usedIds = [];
@@ -312,7 +318,7 @@ function processDownData(data, callback){
 									}
 								}
 							}
-						}
+						}//action == create
 					}
 				}
 			}
@@ -353,7 +359,7 @@ function processUpData (id, message, callback) {
 				if (!resultObj.updata.$) resultObj.updata.$ = {};
 				var a = resultObj.updata.$;
 				var ws = connections[id];
-				if (resultObj.updata.hasOwnProperty("window"))
+				if (resultObj.updata.hasOwnProperty("window") && (!a.status || a.status == "created"))
 				{
 					//TODO process a case when a window is removed
 					if (!a.session) a.session = generateSessionId();
@@ -372,10 +378,12 @@ function processUpData (id, message, callback) {
 				
 				}
 				else {
+					//TODO process info
+
 					if (!a.status) a.status = "updated";
 					a.session = ws.session;
 					if (!a.object) {
-						if (a.status == "created") a.object = ws.window;
+						if (a.status == "created" || a.status == "info") a.object = ws.window;
 						else err = "Object id not defined";
 						
 					}
@@ -404,7 +412,7 @@ function processUpData (id, message, callback) {
 						else {
 							var i = ws.objects.indexOf(a.object);
 							if (i < 0) err = "No object " + a.object + " is registered in session " + ws.session + ", window " + ws.window;
-							else if (a.status == "removed") a.objects.splice(i, 1);
+							else if (a.status == "removed") ws.objects.splice(i, 1);
 						}
 					}
 				}
@@ -412,11 +420,36 @@ function processUpData (id, message, callback) {
 		}
 		if (err) displayError(err);
 		else {
-			callback(xmlBuilder.buildObject(resultObj).replace(/"/g, "'"));
+			callback(xmlBuilder.buildObject(resultObj).replace(/"/g, "'").replace(/>empty</g, "><"));
 		}
 
 		
 	});
+}
+function getConnectionsList() {
+
+	if (true) {
+		var list = {updata: {session: []}};
+		for (var w in connections) 
+			if (connections.hasOwnProperty(w) && connections[w]) {
+				var sessionItem = {"$":{}, "window": []};
+				for (var i = 0; i < list.updata.session.length; i++) {
+					if (list.updata.session[i].$ && list.updata.session[i].$.id == connections[w].session)
+						sessionItem = list.updata.session[i];
+				}
+				if (!sessionItem.$.id) {
+					
+					sessionItem.$.id = connections[w].session;
+					list.updata.session.push(sessionItem);
+				}
+				sessionItem.window.push({"$" : {"id" : connections[w].window}});
+			}
+		var str = xmlBuilder.buildObject(list);
+		return (str.replace(/"/g, "'") + "\n");
+		
+	} else {
+		return "<updata/>";
+	}
 }
 function displayError(err) {
 	console.error(err);
@@ -424,26 +457,7 @@ function displayError(err) {
 	if (tcpSocket) tcpSocket.write(err);
 	
 }
-//getTargetId(data, function(id, data){
-/*function getTargetId(data, callback){
-	xml2js.parseString(data, function (err, resultObj){
-		if (err || !resultObj) console.error("Invalid xml or parsing error", err, resultObj); 
-		else {
-		console.log("parsing data", resultObj, err, resultObj.downdata);
-			var id = "";
-			if (!err) {		
-				if (!resultObj ) err = "invalid xml " + data;//throw "invalid xml " + data;
-				else if (!resultObj.downdata) err = ("invalid xml tag (downdata expected) or empty element" + data);//throw console.error("invalid xml tag (downdata expected) " + data);
-				else if (!resultObj.downdata || !resultObj.downdata.$ || !resultObj.downdata.$.session) {
-					console.warn("no session id attribute");
-					id = "";
-				} else id = resultObj.downdata.$.session;
-			}
-		}
-		
-		callback(id, data, err);
-	});
-}*/
+
 
 process.stdin.setEncoding('utf8');
 //TODO config changing in command line
@@ -492,7 +506,7 @@ function removeElements(arr) {
 }
 function showHelp() {
 	//TODO
-	sendOutput("Hear should be help. " + arguments[0] + "\n");
+	sendOutput("Here should be help. " + arguments[0] + "\n");
 }
 function sendOutput() {
 	var argsString = Array.prototype.join.call(arguments, '\n');

@@ -191,7 +191,7 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		showDynamicGrid: true,
 		showAbsGrid: true,
 		showAbsDynamicGrid: true,
-		showLabels: true,
+		showLabels: false,
 		showArcs: true
 		};
 ConfigManager.canvasFormatFields = {width : "f", height: "f", 

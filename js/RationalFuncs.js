@@ -342,6 +342,7 @@ console.log(juliatestMethods);
 	 	              ].join("\n");
 	var resMap = new ComplexShaderMap(juliatestCode, false, juliatestUniforms, juliatestMethods);
 	resMap.initData = jData;
+	console.log("data.xml", resMap.initData.xml);
 	return resMap;
 
 }
