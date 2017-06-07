@@ -35,7 +35,7 @@
 </window>
 </rspage>
 
-<updata><point id="pnt1" canvas="canvas1"><cn re="0.5578" im="-3.321"/></point></updata>
+<updata status='created' object='canvas1'><point id="pnt1" canvas="canvas1"><cn re="0.5578" im="-3.321"/></point></updata>
 <downdata action="create" object="window1">
 	<canvas type="sphere" id="canvas2" name="Another canvas"/>
 </downdata>

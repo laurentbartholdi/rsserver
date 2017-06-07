@@ -1,4 +1,0 @@
-- coloring algorithm: points of abs value>2 are already black!
-- precision: <downdata><function type='newton' degree='6'/></downdata> has huge undetermined region around 0
-- config set Iterations 10000 seems to be always OK - default value changed (in ConfigManager.js)
-- see line 240 in RationalFuncs.js for the coloring algorithm - doesn't work on ubuntu.
