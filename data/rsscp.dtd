@@ -18,7 +18,7 @@ window IDREF #IMPLIED
 position CDATA #IMPLIED>
 
 
-<!ELEMENT function (nom, denom, cycle+, options*)>
+<!ELEMENT function (numer, denom, cycle+, options*)>
 <!ATTLIST function degree CDATA #REQUIRED>
 <!ELEMENT options (config*)>
 <!ELEMENT config EMPTY>
@@ -34,8 +34,8 @@ position CDATA #IMPLIED>
 id ID #REQUIRED
 canvas IDREF #IMPLIED
 name CDATA #REQUIRED>
-<!ELEMENT nom (cn+)>
-<!ATTLIST nom degree CDATA #IMPLIED>
+<!ELEMENT numer (cn+)>
+<!ATTLIST numer degree CDATA #IMPLIED>
 <!ELEMENT denom (cn+)>
 <!ATTLIST degree CDATA #IMPLIED>
 <!ELEMENT cycle (cn+)>
@@ -53,7 +53,7 @@ name CDATA #IMPLIED>
 theta CDATA #IMPLIED phi CDATA #IMPLIED>
 
 <!ELEMENT updata ((point|arc|button)|(transform?, rotation?, point*, line*)) >
-<!ATTLIST updata action (create|move|remove) "create" session IDREF #REQUIRED>
+<!ATTLIST updata status (created|updated|removed|button-click|error) "updated" session IDREF #REQUIRED>
 <!ELEMENT downdata ((window|canvas|button|text|function|bitmap|point|arc)|(transform?, rotation?, point*, line*, arc*, config*))>
 <!ATTLIST downdata action (create|populate|remove) "create"
 object IDREF #REQUIRED
@@ -62,7 +62,7 @@ session IDREF #REQUIRED>
 <!ELEMENT transform (cn)><!-- must have exactly 4 children, they will be interpreted as coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3) -->
 <!ELEMENT rotation EMPTY>
 <!ATTLIST rotation
-x CDATA "0" y CDAYA "0" z CDATA "0" order (XYZ|YZX|ZXY|XZY|YXZ|ZYX) "XYZ"> <!-- Euler angles -->
+x CDATA "0" y CDATA "0" z CDATA "0" order (XYZ|YZX|ZXY|XZY|YXZ|ZYX) "XYZ"> <!-- Euler angles -->
 <!ELEMENT error PCDATA>
 
 ]>
