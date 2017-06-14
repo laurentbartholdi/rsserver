@@ -2,7 +2,8 @@
 2. Install the ws package (https://github.com/websockets/ws)
 3. In a terminal, run "node rsserver"
 4. In a browser, go to http://127.0.0.1:1729/
-5. In GAP, execute the following commands:
+5. In GAP create a TCP client in localhost, port 1728. 
+For example, execute the following commands:
 LoadPackage("scscp");
 cs:=InputOutputTCPStream("localhost", 1728);
 In the terminal where rsserver runs you should now read "tcp client connected".
@@ -16,16 +17,21 @@ You can use other ports for the HTTP and TCP servers by specifying them
 as the third and the fourth argument respectively:
 node rsserver 192.168.178.33 8080 1337
 
-To send data to the client, just write them into the created stream, for example
-WriteLine( cs, "FUNCTION -1.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0\nCYCLES 0.0 0.0 1 2 -1.0 0.0 0 2 Infinity any 2 1" );
 
-To receive data from the client, press the "Submit" button in the browser window, then read the same TCP stream in GAP. 
+CANVAS UI
 
-One can also change some configuration parameteres from the terminal, where rsserver runs. Type "config set [name value [name value...]]". To read a current parameter value type "config get [name]". The same string could be send from GAP through the TCP-stream.
+Click and drag to rotate the sphere.
 
-UI
-Click and drag to rotate the sphere, Ctrl-click and drag to draw on it's surface.
+For Moebius transformation, double-click somewhere on the sphere surface to add a reference point. (In current design the reference point for Moebius transformations looks like a green diamond) Double-click a reference point to remove it. Drag a reference point to apply the transformation moving this point to the new place and living the other reference points unchanged. It's also possible to use only two points for Moebius transformation: if you move one of the points, the second point and it's opposite will be unchanged. The button "Reset transformation" make the transformation applyed to the sphere's surface, identical. The button "Clear reference points" removes all reference points, but leaves the transformation unchanged.
 
-For Moebius transformation, double-click somewhere on the sphere surface to add a reference point. Double-click a reference point to remove it. Drag a reference point to apply the transformation moving this point to the new place and living the other reference points unchanged. It's also possible to use only two points for Moebius transformation: if you move one of the points, the second point and it's opposite will be unchanged.
-Shift-doouble-click to make selected point on the sphere. The point is dragable. 
+Ctrl-click and drag to draw a line on the sphere's surface. The button "Clear drawing" removes all lines, drawn on the sphere's surface.
 
+Shift-double-click to create a point on the sphere. (In current design a point looks like a pink ball with a flag with number on it) The point is dragable. Shift-double-click on a point to remove it.
+
+"Submit" button sends to the server information about the canvas: surface image, transformation, rotation, arcs, points and lines. 
+
+GRID AND LABELS ON THE SPHERE
+
+There are two types of grid on the sphere: constant absolute value lines (red in current design) and constan real and imaginary part lines (green). Both grids has the lines that are always visible (0.1, 0.5, 1, 2, 10 absolute values, these labels are light red, -1, 0 and 1 for real and imaginary parts, green) and lines depending on transformation applyed ("dynamic grid"). All type of grid lines can have labels. Besides that there labels that are always present: 0, 1, i, -1, -i and infinity, they are also green. To show and hide grids and labels use "Grid and labels" control set. 
+
+When the Fatou and Julia sets of a rational function are drawn on the sphere's surface, the formula of this function is shown below the canvas and controls. 
