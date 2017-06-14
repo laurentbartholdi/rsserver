@@ -400,7 +400,11 @@ var DATA_IN_XML = true;
 			var arr;
 			if (xmlel && xmlel.getElementsByTagName("parsererror").length == 0 ) {
 				DATA_IN_XML = true;
-				arr = xmlToStrings(xmlel);
+				try {
+					arr = xmlToStrings(xmlel);
+				} catch (e) {
+					sendError("Invalid XML");
+				}
 			} else {
 				sendError("XML parse error " + xmlel.getElementsByTagName("parsererror")[0]);
 			}
