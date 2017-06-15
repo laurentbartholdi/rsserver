@@ -1181,7 +1181,7 @@ RSCanvas.prototype = {
 						if (!cnNode) console.error("Data error. Incorrect 'point' node.", pointsData[i]);
 						else pts.push(Complex.fromXML(cnNode));
 					}
-					this.setNewSelectedPoints(pts);
+					this.addSelectedPoints(pts);
 					pointsParsed = true;
 					console.log("points", pts);
 				}
