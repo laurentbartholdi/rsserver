@@ -87,8 +87,8 @@ function getPolyString(argName, coefs, node, precision) {
 		if ((Complex.optimized ? a.r(): a.r) > Complex.epsilon) {
 			var isComplex = Math.abs(a.re) > Complex.epsilon && Math.abs(a.i) > Complex.epsilon;
 			var isNegativ = !isComplex && (a.re < -Complex.epsilon || a.i < -Complex.epsilon);
-			if (a.equals(Complex["-1"])) node.innerHTML += (i==0 ? (firstFound ? " - 1" : "-1") : (firstFound ? " - " : "-")) 
-			else node.innerHTML += ((firstFound && !isNegativ) ? " + " : "") + ((a.equals(Complex["1"]) && i > 0) ? "" : ( (isComplex ? "(" : "") + a.toString(true, precision) + (isComplex ? ")" : "")));
+			if (isNegativ) { a = Complex(-a.re,-a.i); node.innerHTML += (firstFound ? " - " : "-"); } else node.innerHTML += (firstFound ? " + " : "");
+			if (!a.equals(Complex["1"]) || i==0) node.innerHTML += (isComplex ? "(" : "") + a.toString(true, precision) + (isComplex ? ")" : "");
 			getZPowerHTML(argName, i, node);
 			firstFound = true;
 		}

@@ -7,7 +7,7 @@ var InterfaceNames = {
 	SHOW_DYN_GRID: "Show dynamic grid",
 	SHOW_LABELS: "Show labels",
 	RESET_TRANSFORM: "Reset transformation",
-	CLEAR_REFPOINTS: "Clear referens points",
+	CLEAR_REFPOINTS: "Clear reference points",
 	SUBMIT: "Submit",
 	SHOW_DATA: "Show data",
 	HIDE_DATA: "Hide data",
