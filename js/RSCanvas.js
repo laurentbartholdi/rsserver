@@ -650,7 +650,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	
 	var selectedPointsAnchors = [];
 	
-	function addSelectedPointAnchor (pos) {
+	function addSelectedPointAnchor (pos, pars) {
 		var spa; 
 		var firstHiddenPointIndex = -1;
 		var selectedPointsCount = 0;
@@ -662,15 +662,35 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		}
 		console.log(selectedPointsCount, this.selectedPointsLimit);
 		if ((this.selectedPointsLimit == undefined || this.selectedPointsLimit < 0) || selectedPointsCount < that.selectedPointsLimit) {
-			console.log("adding selected point");
-			if (firstHiddenPointIndex >= 0) {
+			if (firstHiddenPointIndex >= 0 && !pars) {
 				spa = selectedPointsAnchors[firstHiddenPointIndex];
 				spa.show();
 				spa.setPosition(pos);
 			}  else {
-				//spa = new DiamondMarker(pos, that, "selected point");
-				//spa = new RSTextLabel(pos, that);//, "selected point");
-				spa = new RSTextLabelMoveable(pos, that);//, "selected point");
+				if (pars) {
+					var argParameters = {};
+					if (pars.color) {
+						if (pars.color.substr(0, 2) == "0x") pars.color = "#" + pars.color.substr(2-pars.color.length, pars.color.length-2);
+						var c = new THREE.Color(pars.color);
+						argParameters.pointerColor = c;
+						var bc = new THREE.Color(0, 0, 0);
+						bc.lerp(c, 0.3);
+						argParameters.backgroundColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: .8 };
+						bc.set("#ffffff");
+						bc.lerp(c, 0.3);
+						argParameters.textColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
+						bc.lerp(c, 0.3);
+						argParameters.borderColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
+					}
+					if (pars.radius) argParameters.pointerSize = parseFloat(pars.radius);
+					if (pars.message) argParameters.message = pars.message;
+					//By default, when there is no "movable" attribute, if a point has given label it's not movable, otherwise it's movable. 
+					if ((pars.hasOwnProperty("movable") && (pars.movable == "false" || pars.movable == "0" || pars.movable.toLowerCase() == "no" ||(!pars.movable)))
+							|| (!pars.hasOwnProperty("movable") && pars.hasOwnProperty("message")))
+						spa = new RSTextLabel(pos, that, argParameters);
+					else spa = new RSTextLabelMoveable(pos, that, argParameters);
+				} 
+				else spa = new RSTextLabelMoveable(pos, that);//, "selected point");
 				selectedPointsAnchors.push(spa);
 				spa.show();
 			}
@@ -679,7 +699,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			that.grid.checkLabelCollisions(spa);
 
 		}
-		//console.log("addSelectedPointAnchor", pos.x, pos.y, pos.z, "selectedPointsCount", selectedPointsCount, "limit", that.selectedPointsLimit, this);
 		that.somethingChanged = true;
 	}
 	function removeAnchor (pm) {
@@ -910,7 +929,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	
 	//------------end private methods-----------------------------------
 
-	                		this.addSelectedPoint= function(z) {
+	                		this.addSelectedPoint= function(z, pars) {
 	                			console.log("addSelectedPoint", z);
 	                			
 	                				var exists = false;
@@ -921,15 +940,16 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                					
 	                				}
 	                			}
-	                			if (!exists) 
-	                				addSelectedPointAnchor(CU.complexToLocalNormalized(z, this.currentTransform).multiplyScalar(RSCanvas.SPHERE_RADIUS));
+	                			if (!exists || pars) 
+	                				addSelectedPointAnchor(CU.complexToLocalNormalized(z, this.currentTransform).multiplyScalar(RSCanvas.SPHERE_RADIUS), pars);
 	                		};
 	                		this.muteChangeSelectedPointsEvent = false;
-	                		this.addSelectedPoints= function(zs) {
+	                		this.addSelectedPoints= function(zs, pars) {
 	                			console.log("!addSelectedPoints", zs);
 	                			for (var i = 0; i < zs.length; i++){
 	                				this.muteChangeSelectedPointsEvent = (i < zs.length - 1);
-	                				this.addSelectedPoint(zs[i]);
+	                				if (pars) this.addSelectedPoint(zs[i], pars[i])
+	                				else this.addSelectedPoint(zs[i]);
 	                			}
 	                		};
 	                		this.setNewSelectedPoints = function(zs) {
@@ -1175,15 +1195,34 @@ RSCanvas.prototype = {
 				
 				var pointsData = data.getElementsByTagName("point");
 				if (pointsData && pointsData.length > 0) {
+					console.log("parsing points", pointsData);
 					var pts = [];
+					var params = [];
+					function readAttribute(name,  i) {
+						var val = pointsData[i].getAttribute(name);
+						if (val) {
+							if (!params[i]) params[i] = {};
+							params[i][name] = val;
+						}
+					}
 					for (var i = 0; i < pointsData.length; i++) {
 						var cnNode = pointsData[i].getElementsByTagName("cn")[0];
-						if (!cnNode) console.error("Data error. Incorrect 'point' node.", pointsData[i]);
-						else pts.push(Complex.fromXML(cnNode));
+						var spNode = pointsData[i].getElementsByTagName("sp")[0];
+						if (!cnNode && !spNode) console.error("Data error. 'Point' node must contain either 'cn' or 'sp' child", pointsData[i]);
+						else if (cnNode) pts.push(Complex.fromXML(cnNode));
+						else pts.push(CU.localToComplex(this.converter.xmlSPToLocal(spNode)));
+						var label = pointsData[i].getElementsByTagName("label")[0];
+						if (label && label.childNodes[0]) {
+							params[i] = {};
+							params[i].message = label.childNodes[0].nodeValue;
+						}
+						readAttribute("color", i);
+						readAttribute("radius", i);
+						readAttribute("movable", i);
 					}
-					this.addSelectedPoints(pts);
+					this.addSelectedPoints(pts, params);
 					pointsParsed = true;
-					console.log("points", pts);
+					console.log("points", pts, params);
 				}
 				
 				var rotationData = data.getElementsByTagName("rotation")[0];
@@ -1531,6 +1570,17 @@ RSCanvas.PointConverter.prototype = {
         	if (p) return this.canvasObj.sphere.worldToLocal(p);
             else return null;
 
+        },
+        
+        xmlSPToLocal: function (node) {
+        	function checkAttribute(name) {
+        		var a = node.getAttribute(name);
+        		if (a) return parseFloat(a);
+        		else return 0;
+        	};
+        	var res = new THREE.Vector3(checkAttribute("x"), checkAttribute("y"), checkAttribute("z"));
+        	if (res.length() > 0) return (res.normalize());
+        	else console.error("Invalid sp node", node);
         }
 
 }
