@@ -141,6 +141,12 @@ DiamondMarker.prototype.ajustRotation = true;
 
 var RSTextLabel = function (arg, rsCanvas, parameters){
 	this.style = {};
+	this.showInfinity = function(t, v) {
+		   var infScale = t.isIdentity() ? 1 : t.determinantAbs()/(t.a.r2() + t.c.r2());
+		   console.log("showInf", infScale, RSTextLabel.baseInfinityRadius/infScale, v.r())
+		   return v.r() > RSTextLabel.baseInfinityRadius/infScale; 
+	    }
+
 	if ( parameters === undefined ) parameters = {};
 	if (parameters.message !== undefined) this.message = parameters.message;
 	copyObject(RSTextLabel.baseStyle, this.style);
@@ -165,6 +171,7 @@ RSTextLabel.prototype = Object.create(PointMarker.prototype);
 RSTextLabel.prototype.ajustRotation = false;
 RSTextLabel.prototype.updateObjectPosition  = function() {
 	PointMarker.prototype.updateObjectPosition.call(this);
+	if (!this.message) this.updateLabelText();
 	this.updateObjectRotation();
 }
 RSTextLabel.prototype.updateObjectRotation = function(){
@@ -226,8 +233,10 @@ RSTextLabel.prototype.clearContext = function () {
     this.labelContext.fillRect(0, 0, this.labelCanvas.width, this.labelCanvas.height);
 }
 
+RSTextLabel.baseInfinityRadius = 500;//Points with greater absolute values are shown as "Infinity" when trivial Moebius transformation is applied
 RSTextLabel.prototype.updateLabelText = function (message){
-	message = message || this.value.toString(true, this.style.precision);
+	console.log(this, "updateLabelText", message);
+	message = message || (this.showInfinity(this.canvas.currentTransform, this.value) ? "∞" : this.value.toString(true, this.style.precision));
 	this.clearContext();
     var context = this.labelContext;
     var w, h, textWidth;
@@ -251,12 +260,13 @@ RSTextLabel.prototype.updateLabelText = function (message){
     this.labelWidth = this.style.resolution*w;
     this.labelHeight = this.style.resolution*h;
     this.updateObjectRotation();
+    
 	
 }
 
 RSTextLabel.prototype.setValue = function (val) {
-	if (this.labelContext) {
-		this.updateLabelText(val.toString(true, this.style.precision || 3));		
+	if (this.labelContext && !this.message) {
+		this.updateLabelText((this.canvas && this.showInfinity(this.canvas.currentTransform, val))? "∞" :  val.toString(true, this.style.precision || 3));		
 	}
 	PointMarker.prototype.setValue.call(this, val);
 }

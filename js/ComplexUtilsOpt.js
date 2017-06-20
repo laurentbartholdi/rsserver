@@ -20,7 +20,10 @@ var CU = {
 		},
 		sphercicalToComplex: function (sph, transform) {
 			
-			var c = Complex.Polar(
+			var c;
+			if (sph.theta == Math.PI*.5) c = Complex["Infinity"];
+			else
+				c = Complex.Polar(
 					2*PROJECTION_SPHERE_RADIUS*Math.tan(0.5*(sph.theta + Math.PI*.5)), 
 					sph.phi);
 			if (transform) c = transform.apply(c);
@@ -308,7 +311,7 @@ LinearTransform.prototype = Object.create(MoebiusTransform.prototype);
 var LTp = LinearTransform.prototype;
 LTp.constructor = LinearTransform;
 LTp.apply = function (z) {return z.mult(this.a).add(this.b);};
-LTp.infinityImage = function() {return Complex["infinity"]};
+LTp.infinityImage = function() {return Complex["Infinity"]};
 LTp.invert = function() {
 	return new LinearTransform(Complex["1"].divBy(this.a), Complex.neg(this.b.divBy(this.a)));
 };
