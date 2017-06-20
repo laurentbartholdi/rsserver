@@ -47,7 +47,8 @@
 <!ATTLIST arc
 	  id ID #REQUIRED
 	  canvas IDREF #IMPLIED
-	  color CDATA "0x333399">
+	  color CDATA "0x333399"
+	  type CDATA ("points"|"transformation") "points">
 
 <!ELEMENT button EMPTY>
 <!ATTLIST button 
