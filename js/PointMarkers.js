@@ -149,6 +149,8 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 
 	if ( parameters === undefined ) parameters = {};
 	if (parameters.message !== undefined) this.message = parameters.message;
+	this.noLabel = (parameters.message == "empty"); 
+
 	copyObject(RSTextLabel.baseStyle, this.style);
 	copyObject(parameters, this.style);
 	var geometry = new THREE.SphereGeometry( this.style.pointerSize, 32, 32 ); 
@@ -157,12 +159,12 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 	var pointer = new THREE.Group();
 	pointer.add(sph);
 	this.labelWidth = 1;
-	this.labelHeight = 1;
-	this.createLabelPlane();
+	this.labelHeight = 1;1
+	if (!this.noLabel) this.createLabelPlane();
 	pointer.add(this.label);
 	PointMarker.call(this, arg, rsCanvas, pointer, this.style.pointerSize/2);
 	sph.marker = this;
-	this.updateLabelText(this.message);
+	if (!this.noLabel) this.updateLabelText(this.message);
 	var that = this;
 	//this.canvas.canvas3d.addEventListener("sphereMoved", function(e){that.updateObjectRotation();});
 	this.canvas.labelManager.registerLabel(this);
@@ -171,7 +173,7 @@ RSTextLabel.prototype = Object.create(PointMarker.prototype);
 RSTextLabel.prototype.ajustRotation = false;
 RSTextLabel.prototype.updateObjectPosition  = function() {
 	PointMarker.prototype.updateObjectPosition.call(this);
-	if (!this.message) this.updateLabelText();
+	if (!this.message && !this.noLabel) this.updateLabelText();
 	this.updateObjectRotation();
 }
 RSTextLabel.prototype.updateObjectRotation = function(){
@@ -181,9 +183,11 @@ RSTextLabel.prototype.updateObjectRotation = function(){
 	q.inverse();
 	this.object.quaternion.copy(q);
 //	console.log(this.value, "updateRotation", glp.x, glp.y, glp.z, testp.x, testp.y, testp.z);
-	var signx  = glp.x > 0 ? 0.5 : -0.5;
-	var signy  = glp.y > 0 ? 0.5 : -0.5;
-	this.label.position.set(signx*this.labelWidth, signy*this.labelHeight, 0);
+	if (!this.noLabel) {
+		var signx  = glp.x > 0 ? 0.5 : -0.5;
+		var signy  = glp.y > 0 ? 0.5 : -0.5;
+		this.label.position.set(signx*this.labelWidth, signy*this.labelHeight, 0);
+	}
 	
 }
 function copyObject(src, res) {
@@ -265,7 +269,7 @@ RSTextLabel.prototype.updateLabelText = function (message){
 }
 
 RSTextLabel.prototype.setValue = function (val) {
-	if (this.labelContext && !this.message) {
+	if (this.labelContext && !this.message && !this.noLabel) {
 		this.updateLabelText((this.canvas && this.showInfinity(this.canvas.currentTransform, val))? "∞" :  val.toString(true, this.style.precision || 3));		
 	}
 	PointMarker.prototype.setValue.call(this, val);
