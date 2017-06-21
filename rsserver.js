@@ -23,6 +23,11 @@ var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 	    console.log('tcp client disconnected');
 	    tcpSocket = null;
 	});
+	c.on('error', function(err){
+		console.log("Error in TCP connection");
+		console.log(err.stack);
+		tcpSocket = null;
+	});
 	c.on('data', function(data){
 		processDownData(data, function(id, data, err){
 			console.log("downdata processed", id, err, data);
