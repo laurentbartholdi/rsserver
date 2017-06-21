@@ -67,12 +67,10 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		console.log("updateCanvas", configObj);
 		
 		if (configObj.width) {
-			console.log("setting width. before", canvasCell.getAttribute("width"), mainCanvas.getAttribute("width"));
 			this.canvasWidth = configObj.width;
 			var cellWidth = this.canvasWidth;// + 12;
 			mainCanvas.setAttribute("width", this.canvasWidth.toString());
 			canvasCell.setAttribute("width", cellWidth.toString());
-			console.log("setting width. after", canvasCell.getAttribute("width"), mainCanvas.getAttribute("width"));
 		}
 		if (configObj.height) {
 			this.canvasHeight = configObj.height;

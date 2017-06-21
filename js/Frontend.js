@@ -122,6 +122,14 @@ var DATA_IN_XML = true;
 					container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
 					getOutputDomElement(dataObject, container.outputLine, 3);
 				}
+				var configElements = dataElement.getElementsByTagName("config");
+				if (configElements.length > 0) {
+					var cfg = {};
+					for (var i = 0; i < configElements.length; i++) {
+						ConfigManager.parseXMLNode(configElements[i], cfg);
+					}
+					container.rscc.updateCanvas(cfg);
+				}
 				container.rscc.rsCanvas.parseData(dataElement);
 
 			} else {
