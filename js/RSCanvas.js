@@ -193,11 +193,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		if (this.transformUpdated) {
 			if (this.sphere.material instanceof THREE.ShaderMaterial){
 				updateComplexAttribute(this.sphere.geometry, 
-						this.sphere.material.complexShaderMap, 
-						this.sphere.material.attributes);
-				
-				this.sphere.material.attributes.c.needsUpdate = true;
-				this.sphere.material.attributes.scale.needsUpdate = true;
+						this.sphere.material.complexShaderMap);
 			} else if (this.sphere.material.complexTextureImage) {
 				
 				this.updateMaterialMap();
@@ -756,12 +752,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		console.log("initShaderMaterial", arguments);
 		if (!shaderMap) shaderMap = new ComplexShaderMap();
 		this.curShaderMap = shaderMap;
-		sphereShaderAttributes = {
-				c: {type: "v2", value: []},
-				scale: {type: "f", value: []},
-				z: {type: "v2", value: []},
-				w: {type: "v2", value: []}};
-		updateComplexAttribute(geom, shaderMap, sphereShaderAttributes);
+		updateComplexAttribute(geom, shaderMap);
 		var uniforms = THREE.UniformsUtils.merge ([
 			THREE.UniformsLib[ "lights" ],
 		{
@@ -772,19 +763,20 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				shaderMap.uniforms]);
 
 		                                           
-		                                       
+		console.log("uniforms", uniforms);                                       
 		var shaderMaterial = new THREE.ShaderMaterial({
-			  attributes: sphereShaderAttributes,
 			  uniforms:uniforms,
 			  vertexShader: vertexShaderString,
 			  fragmentShader: this.getFragmentShaderString(shaderMap),
 			  lights: true
 			  });
+		console.log("vertexShader", shaderMaterial.vertexShader);
+		console.log("fragmentShader", shaderMaterial.fragmentShader);
 		shaderMaterial.complexShaderMap = shaderMap;
+		console.log("lights", shaderMaterial.lights);
 		return shaderMaterial;
 	}
 	var vertexShaderString = [
-	                      	//"attribute vec3 aLocalPosition;",
 	                      	"attribute vec2 c;",
 	                      	"attribute float scale;",
 	                      	"attribute vec2 w;",
@@ -799,32 +791,36 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                      	"uniform vec3 ambient;",
 	                      	"uniform vec3 emissive;",
 	                      	"uniform vec3 ambientLightColor;",
-	                      	"#if MAX_DIR_LIGHTS > 0",
-	                      		"uniform vec3 directionalLightColor[ MAX_DIR_LIGHTS ];",
-	                      		"uniform vec3 directionalLightDirection[ MAX_DIR_LIGHTS ];",
+	                      	"#if NUM_DIR_LIGHTS > 0",
+	                        "struct DirectionalLight {",
+	                         "   vec3 direction;",
+	                         "   vec3 color;",
+	                         "   int shadow;",
+	                         "   float shadowBias;",
+	                         "   float shadowRadius;",
+	                         "   vec2 shadowMapSize;",
+	                         "};",
+	                         "uniform DirectionalLight directionalLights[ NUM_DIR_LIGHTS ];",
 	                      	"#endif",
 
 	                      	"void main() {",
 	                      		"vec3 transformedNormal = normalMatrix * normal;",
 	                      		"vLightFront = vec3( 0.0 );",
-	                      		"#if MAX_DIR_LIGHTS > 0",
-	                      			"for( int i = 0; i < MAX_DIR_LIGHTS; i ++ ) {",
+	                      		"#if (NUM_DIR_LIGHTS > 0)",
+	                      			"for( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {",
 	                      		
-	                      				"vec4 lDirection = viewMatrix * vec4( directionalLightDirection[ i ], 0.0 );",
+	                      				"vec4 lDirection = viewMatrix * vec4( directionalLights[ i ].direction, 0.0 );",
 	                      				"vec3 dirVector = normalize( lDirection.xyz );",
 	                      		
 	                      				"float dotProduct = dot( transformedNormal, dirVector );",
 	                      				"vec3 directionalLightWeighting = vec3( max( dotProduct, 0.0 ) );",
 	                      		
 	                      		
-	                      				"vLightFront += directionalLightColor[ i ] * directionalLightWeighting;",
+	                      				"vLightFront += directionalLights[ i ].color * directionalLightWeighting;",
 	                      			"}",
 	                      		
 	                      		"#endif",
 	                      		"vLightFront = vLightFront * diffuse + ambient * ambientLightColor + emissive;",
-//	                      		"vLightFront = vLightFront + ambient;",
-	                      	
-	                      		//"vPosition = aLocalPosition;",
 	                      		"vC =c;",
 	                      		"vScale = scale;",
 	                      		"vZ = z;",
@@ -866,22 +862,21 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                      	console.log("fragmentShader = " + fragmentShaderString);
 	                      	return fragmentShaderString;
 	                      };
-	                      function updateComplexAttribute(geom, shaderMap, attr){
-	                    		if (!attr) {
-	                    			attr = {};
+	                      function updateComplexAttribute(geom, shaderMap){
+	                    		var posArr = geom.getAttribute("position");
+	                    		var numVerticies = posArr.count;
+	                    		if (!geom.getAttribute("c")) {
+	                    			geom.addAttribute("c", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
+	                    			geom.addAttribute("scale", new THREE.BufferAttribute(new Float32Array(numVerticies), 1, false ));
+	                    			geom.addAttribute("z", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
+	                    			geom.addAttribute("w", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
 	                    		}
-	                    		var newArray = false;
-	                    		if (!attr.c) {
-	                    			attr.c = {type: "v2", value:[]};
-	                    			attr.scale = {type: "f", value: []};
-	                    			attr.z = {type: "v2", value: []};
-	                    			attr.w = {type: "v2", value: []};
-	                    			newArray = true;
-	                    		}
+	                    		var attr = geom.attributes;
 	                    		
-	                    		
-	                    		for (var i = 0; i < geom.vertices.length; i++){
-	                    			var c0 = CU.localToComplex(geom.vertices[i]);
+	                    		var curPos = new THREE.Vector3();
+	                    		for (var i = 0; i < numVerticies; i++){
+	                    			curPos.set(posArr.getX(i), posArr.getY(i), posArr.getZ(i));
+	                    			var c0 = CU.localToComplex(curPos);
 	                    			var c, scale;
 	                    			if (that.currentTransform) {
 	                    				c = that.currentTransform.apply(c0);
@@ -890,30 +885,18 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                    				c = c0; 
 	                    				scale = 1.;
 	                    			}
-	                    			var w = Complex.optimized ? new Complex(1/(c.r() + 1), 0) : new Complex(1/(c.r + 1), 0);
+	                    			var w = new Complex(1/(c.r() + 1), 0);
 	                    			var z = c.mult(w);
-	                    			var vec, zvec, wvec;
-	                    			if ( shaderMap.polar ) {
-	                    				vec = Complex.optimized ? new THREE.Vector2(c.r(), c.t()):new THREE.Vector2(c.r, c.t);
-		                    			zvec = Complex.optimized ? new THREE.Vector2(c.r(), c.t()):new THREE.Vector2(z.r, z.t);
-			                    		wvec = Complex.optimized ? new THREE.Vector2(c.r(), c.t()):new THREE.Vector2(w.r, w.t);
+	                    			attr.scale.setX(i, scale);
+	                    			if ( shaderMap && shaderMap.polar ) {
+	                    				attr.c.setXY(i, c.r(), c.t());
+	                    				attr.z.setXY(i, z.r(), z.t());
+	                    				attr.w.setXY(i, w.r(), w.t());
 	                    			} else {
-	                    				vec = new THREE.Vector2(c.re, c.i);
-		                    			zvec = new THREE.Vector2(z.re, z.i);
-			                    		wvec = new THREE.Vector2(w.re, w.i);
+	                    				attr.c.setXY(i, c.re, c.i);
+	                    				attr.z.setXY(i, z.re, z.i);
+	                    				attr.w.setXY(i, w.re, w.i);
 	                    			}
-	                    			if (newArray) {
-	                    				attr.c.value.push(vec);
-	                    				attr.scale.value.push(scale);
-	                    				attr.z.value.push(zvec);
-	                    				attr.w.value.push(wvec);
-	                    				}
-	                    			else {
-	                    				attr.c.value[i] = vec;
-	                    				attr.scale.value[i] = scale;
-	                    				attr.z.value[i] = zvec;
-	                    				attr.w.value[i] = wvec;
-	                    				}
 	                    		}
 	                    		attr.c.needsUpdate = true;
 	                    		attr.scale.needsUpdate = true;
@@ -1013,7 +996,8 @@ RSCanvas.prototype = {
 			this.bkgColor = this.configManager.getConfigValue("bkgColor") || new THREE.Color(0x333333);
 			
 			
-			var sphGeom = new THREE.SphereGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
+			//var sphGeom = new THREE.SphereGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
+			var sphGeom = new THREE.SphereBufferGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
 
 			var sphMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); 
 			if (materialData) { 
@@ -1046,7 +1030,7 @@ RSCanvas.prototype = {
 			this.renderer.setClearColor(this.bkgColor);
 
 
-			var light = new THREE.AmbientLight( 0x666666 ); 
+			var light = new THREE.AmbientLight( 0x666666, 1. ); 
 			var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
 			directionalLight.position.set( -2, 1, 1 );
 			this.scene.add( directionalLight );

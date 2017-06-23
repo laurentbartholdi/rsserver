@@ -557,10 +557,13 @@ GridLine.prototype = {
 			if (this.log) console.log(this.points);
 		},
 		setObject: function() {
-			this.geometry = new THREE.CircleGeometry(this.radius*(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor), 60);
-			this.material = new THREE.LineBasicMaterial({color: this.color, wireframe: true});
+			//this.geometry = new THREE.CircleGeometry(this.radius*(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor), 60);
+			this.geometry = new THREE.CircleBufferGeometry(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor, 60);
+			
+			this.material = new THREE.LineBasicMaterial({color: this.color});//, wireframe: true});
 			//this.material = new THREE.MeshLambertMaterial({color: this.color, wireframe: true});
 			this.object = new THREE.Line(this.geometry, this.material);
+			this.object.scale = new THREE.Vector3(this.radius, this.radius, this.radius);
 			this.rsCanvas.sphere.add(this.object);
 			this.setObjectPosition();
 			
@@ -574,9 +577,11 @@ GridLine.prototype = {
 			
 		},
 		updateObject: function (){
-			for (var i = 0; i < this.object.geometry.vertices.length; i++) {
+			/*for (var i = 0; i < this.object.geometry.vertices.length; i++) {
 				this.object.geometry.vertices[i].setLength(this.radius*(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor));
-			}
+			}*/
+			this.object.scale.set(this.radius, this.radius, this.radius);
+			
 			this.setObjectPosition();
 			this.object.geometry.verticesNeedUpdate = true;
 			this.object.updateMatrix();

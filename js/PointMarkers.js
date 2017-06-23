@@ -101,7 +101,7 @@ PointMarker.prototype = {
 
 var DiamondMarker = function (arg, rsCanvas, colorInfo, wfColorArg){
 	
-	var geometry = new THREE.OctahedronGeometry(DiamondMarker.SIZE, 0);
+	var geometry = new THREE.OctahedronBufferGeometry(DiamondMarker.SIZE, 0);
 	var	mainColor = DiamondMarker.COLOR;
 	var	wfColor = DiamondMarker.WF_COLOR;
 	if (colorInfo) {
@@ -118,11 +118,11 @@ var DiamondMarker = function (arg, rsCanvas, colorInfo, wfColorArg){
 			}
 		}
 	}
-	var material = new THREE.MeshLambertMaterial({color: mainColor});
+	var material = new THREE.MeshLambertMaterial({color: mainColor, emissive: 0x333333, emissiveIntensity: 0.8});
 
 	PointMarker.call(this, arg, rsCanvas,new THREE.Mesh(geometry, material), DiamondMarker.SIZE);// colorInfo, wfColorArg);
 	
-	var wf = new THREE.Mesh(new THREE.OctahedronGeometry(DiamondMarker.SIZE*1.05, 0),
+	var wf = new THREE.Mesh(new THREE.OctahedronBufferGeometry(DiamondMarker.SIZE*1.05, 0),
 	new THREE.MeshLambertMaterial({color: wfColor, wireframe: true}));
 	this.object.add(wf);
 	wf.marker = this;
@@ -143,7 +143,6 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 	this.style = {};
 	this.showInfinity = function(t, v) {
 		   var infScale = t.isIdentity() ? 1 : t.determinantAbs()/(t.a.r2() + t.c.r2());
-		   console.log("showInf", infScale, RSTextLabel.baseInfinityRadius/infScale, v.r())
 		   return v.r() > RSTextLabel.baseInfinityRadius/infScale; 
 	    }
 
@@ -153,7 +152,7 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 
 	copyObject(RSTextLabel.baseStyle, this.style);
 	copyObject(parameters, this.style);
-	var geometry = new THREE.SphereGeometry( this.style.pointerSize, 32, 32 ); 
+	var geometry = new THREE.SphereBufferGeometry( this.style.pointerSize, 32, 32 ); 
 	var material = new THREE.MeshLambertMaterial({color: this.style.pointerColor});
 	var sph = new THREE.Mesh( geometry, material );
 	var pointer = new THREE.Group();
@@ -239,7 +238,6 @@ RSTextLabel.prototype.clearContext = function () {
 
 RSTextLabel.baseInfinityRadius = 500;//Points with greater absolute values are shown as "Infinity" when trivial Moebius transformation is applied
 RSTextLabel.prototype.updateLabelText = function (message){
-	console.log(this, "updateLabelText", message);
 	message = message || (this.showInfinity(this.canvas.currentTransform, this.value) ? "∞" : this.value.toString(true, this.style.precision));
 	this.clearContext();
     var context = this.labelContext;
