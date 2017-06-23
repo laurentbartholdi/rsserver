@@ -216,6 +216,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
 
 		if (this.somethingChanged) {
+			if (this.showArcs) console.log(this.scene);
 			this.renderer.render(this.scene, this.camera);
 			this.somethingChanged = false;
 			this.labelManager.checkLabels(true);
@@ -323,6 +324,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		for (var i = 0; i < that.arcsData.length; i++){
 			var a = that.arcs[i];
 			a.material.color = that.arcsColors[i];
+			console.log("arc color", a.material.color, that.arcsColors[i]);
 			a.material.needsUpdate = true;
 			curDrawingVertexIndex = 1;
 			if (this.currentTransform.isIdentity() ){
@@ -1047,10 +1049,6 @@ RSCanvas.prototype = {
 
 			this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
 
-			//this.marker = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshLambertMaterial({ color: 0xff0000 }));
-			//this.localMarker = new THREE.Mesh(new THREE.SphereGeometry(1), new THREE.MeshLambertMaterial({ color: 0x0000ff }));
-			//scene.add(marker);
-			//sphere.add(localMarker);
 		    this.converter = new RSCanvas.PointConverter(this);
 			this.showGrid = this.configManager.getConfigValue("showGrid");
 			this.showLabels = this.configManager.getConfigValue("showLabels");
@@ -1244,7 +1242,6 @@ RSCanvas.prototype = {
 								newLine.push(Complex.fromXML (linesData[i].childNodes[j]));
 							}
 						}
-						console.log("new line", newLine);
 						this.drawedLinesData.push(newLine);
 					}
 					console.log("lines parsed", this.drawedLinesData);
@@ -1253,18 +1250,79 @@ RSCanvas.prototype = {
 				}
 				var arcsData = data.getElementsByTagName("arc");
 				if (arcsData && arcsData.length > 0) {
-					//TODO
-					/**/
+					function parseFloatAttribute(node, name) {
+						var r = parseFloat(node.getAttribute(name));
+						if (isNaN(r)) return 0;
+						return r;
+					}
+					function spointToVector(spNode) {
+						var v = new THREE.Vector3(parseFloatAttribute(spNode, "x"), parseFloatAttribute(spNode, "y"), parseFloatAttribute(spNode, "z"));
+						if (v.x == 0 && v.y == 0 && v.z == 0) console.error("Invalid sphere point", spNode);
+						return v.normalize();
+					}
+					
+					
 					for (var i = 0; i < arcsData.length; i++) {
-						//this.arcsColors.push( 
-						//new THREE.Color("rgb(" + arcHeader[2] + ", " + arcHeader[3] + ", " + arcHeader[4] + ")"));
-						if (arcsData[i].hasAttributes() && arcsData[i].attributes.color) {
-							var cString = arcsData[i].attributes.color;
+						if (arcsData[i].hasAttributes() && arcsData[i].getAttribute("color")) {
+							var cString = arcsData[i].getAttribute("color");
 							this.arcsColors.push(ConfigManager.parseColor(cString));
 						} else {
-							this.arcsColors.push(arcsColors[0]);
+							this.arcsColors.push(this.configManager.getConfigValue("arcColor"));
+						}
+						var curArcData = [];
+						if (arcsData[i].getAttribute("type") == "transformation") {
+							var transformCoefs = arcsData[i].getElementsByTagName("cn");
+							if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at four <cn> child nodes", arcsData[i]);
+							else {
+								var t = new MoebiusTransform(Complex.fromXML(transformCoefs[0]),
+															Complex.fromXML(transformCoefs[1]),
+															Complex.fromXML(transformCoefs[2]),
+															Complex.fromXML(transformCoefs[3]));
+								curArcData.push(CU.complexToLocalNormalized(t.apply(Complex["0"])),
+										CU.complexToLocalNormalized(t.apply(Complex(0.5, 0))),
+										CU.complexToLocalNormalized(t.apply(Complex["1"])));
+							}
+						} else {
+							var sps = arcsData[i].getElementsByTagName("sp");
+							if (!sps || sps.length ==0) {
+								var cns = arcsData[i].getElementsByTagName("cn");
+								if (!cns || cns.length == 0) {
+									console.error("Arc entry contains no point", arcsData[i]);
+								} else {
+									for (var j = 0; j < cns.length; j++)
+										curArcData.push(CU.complexToLocalNormalized(Complex.fromXML(cns[j])));
+								}
+								
+							} else {
+								for (var j = 0; j < sps.length; j++)
+									curArcData.push(spointToVector(sps[j]));
+							}
+						}	
+						var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
+						if (v1.equals(v2)) {
+							var v0 = curArcData[1].normalize();
+							var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
+							this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+							                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+							                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+							                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+						} else {
+							var mid = (new THREE.Vector3()).addVectors(v1, v2);
+							if (mid.length == 0)
+								this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+							else {
+								mid.normalize();
+								var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
+								this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+							}
 						}
 					}
+					console.log("arcs parsed", this.arcsData);
+					this.drawArcs();
 					arcsParsed = true;
 				}
 				var configData = data.getElementsByTagName("config");

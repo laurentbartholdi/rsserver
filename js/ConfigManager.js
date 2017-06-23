@@ -52,7 +52,7 @@ ConfigManager.prototype = {
 		},
 
 		setConfigValue: function (key, value, silent) {
-			console.log("setConfigValy", key, value);
+			console.log("setConfigValue", key, value);
 			var oldValue = this.configObj[key];
 			this.configObj[key] = value;
 			if (oldValue != value && !silent) this.invalidateConfig(key);
@@ -117,8 +117,10 @@ ConfigManager.parseXMLNode = function (node, res) {
 	else {
 		var res = res || {};
 		if (!res.flags) res.flags = {canvasFormat: false, style: false, shader: false};
-		var key = node.attributes.key.nodeValue;
-		var val = node.attributes.value.nodeValue;
+		//var key = node.attributes.key.nodeValue;
+		//var val = node.attributes.value.nodeValue;
+		var key = node.getAttribute("key");
+		var val = node.getAttribute("value");
 		return ConfigManager.parseString(["config", key, val], res);
 	}
 }
@@ -192,7 +194,8 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		showAbsGrid: true,
 		showAbsDynamicGrid: true,
 		showLabels: false,
-		showArcs: true
+		showArcs: true,
+		arcColor: 0x333399
 		};
 ConfigManager.canvasFormatFields = {width : "f", height: "f", 
 		bkgColor: "color", 
@@ -209,6 +212,6 @@ ConfigManager.shaderFields = {
 		runAwayRadius: "f", 
 		convergeEpsilon: "f",
 		commonCyclePeriod: "i"};
-ConfigManager.styleFields = {gridLineColor: "color", markerSize: "f"};
+ConfigManager.styleFields = {gridLineColor: "color", markerSize: "f", arcColor: "color"};
 ConfigManager.typeObjects = {canvasFormat: ConfigManager.canvasFormatFields,
 		style: ConfigManager.styleFields, shader: ConfigManager.shaderFields};
