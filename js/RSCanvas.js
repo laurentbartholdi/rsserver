@@ -271,7 +271,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	this.arcsNum = 0;
 	this.arcs = [];
 	this.arcsNeedUpdate = false;
-	//TODO
 	this.resetArcs = function() {
 		this.arcStyles = [];
 		this.arcsData = [];
@@ -300,6 +299,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					smartDrawImpl(that.arcsData[i][j-1], that.arcsData[i][j], a);
 				}
 			} else {
+				//TODO give minimal active vertices number, for small circles to look smooth
 				console.log("draw Arcs");
 				var tData = [];
 				for (var j = 0; j < that.arcsData[i].length; j++) {
@@ -1057,6 +1057,24 @@ RSCanvas.prototype = {
 					lineXMLObj.appendChild(drw[i][j].toXMLObj());
 				}
 			}
+			function getSpElement(vector) {
+				var spEl = createEmptyNode("sp");
+				var v = vector.clone().normalize();
+				spEl.setAttribute("x", v.x);
+				spEl.setAttribute("y", v.y);
+				spEl.setAttribute("z", v.z);
+				return spEl;
+			}
+			if (this.arcsData.length > 0) {
+				for (var i = 0; i < this.arcsData.length; i++) {
+					var arcEl = createEmptyNode("arc");
+					arcEl.setAttribute("color", "#" + this.arcStyles[i].color.getHexString());
+					arcEl.setAttribute("width", this.arcStyles[i].width);
+					for (var j = 0; j < this.arcsData[i].length; j++)
+						arcEl.appendChild(getSpElement(this.arcsData[i][j]));
+					snapshotXMLObj.appendChild(arcEl);
+				}
+			}
 			if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
 				if (this.funcXML) {
 						snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
@@ -1179,6 +1197,7 @@ RSCanvas.prototype = {
 					linesParsed = true;
 					this.linesUpdated = true;
 				}
+				
 				var arcsData = data.getElementsByTagName("arc");
 				if (arcsData && arcsData.length > 0) {
 					function parseFloatAttribute(node, name) {
