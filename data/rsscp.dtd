@@ -48,6 +48,7 @@
 	  id ID #REQUIRED
 	  canvas IDREF #IMPLIED
 	  color CDATA "0x333399"
+	  width CDATA "2"
 	  type CDATA ("points"|"transformation") "points">
 
 <!ELEMENT button EMPTY>
@@ -95,10 +96,10 @@
 	  session IDREF #REQUIRED>
 
 <!ELEMENT transform (cn)>
-<!ELEMENT rotation EMPTY>
 <!-- must have exactly 4 children, they will be interpreted as
      coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3)
   -->
+<!ELEMENT rotation EMPTY>
 <!ATTLIST rotation
 	  x CDATA "0" y CDATA "0" z CDATA "0"
 	  order (XYZ|YZX|ZXY|XZY|YXZ|ZYX) "XYZ">
