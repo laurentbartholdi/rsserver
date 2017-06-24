@@ -6,7 +6,7 @@ var PROJECTION_SPHERE_RADIUS = 0.5;
 var CU = {
 		projectToSphere: function (c, transform) {
 			if (transform) c = transform.invert().apply(c);
-			if (c == Complex["infinity"])
+			if (c == Complex["Infinity"])
 				return {phi: 0, theta: Math.PI/2};
 			return {phi: c.t(), 
 				theta: 2*Math.atan(0.5*c.r()/PROJECTION_SPHERE_RADIUS)-Math.PI/2};
@@ -61,20 +61,6 @@ var CU = {
 Complex.prototype.projectToSphere = function() {return CU.projectToSphere(this);};
 Complex.prototype.toLocalNormalized = function () {return CU.complexToLocalNormalized(this);};
 Complex.prototype.toTexture = function () {return CU.complexToTexture(this);};
-Complex.prototype.equals = function (z) {
-	return (Math.abs(this.re - z.re) < Complex.epsilon && Math.abs(this.i - z.i) < Complex.epsilon);
-};
-
-Complex.random = function () {
-	var s = Math.random();
-	if (s == 0) return Complex["0"];
-	s = s/(1+Math.sqrt(1-s*s));
-	if (Math.random() > .5) s = 1/s;
-	return Complex.Polar(s, 2*Math.PI*Math.random());
-};
-
-Complex.epsilon = 1e-13;
-
 
 
 ComplexMatrix = function (data) {
@@ -186,10 +172,6 @@ MoebiusTransform.prototype = {
 					this.b.mult(t.a).add(this.d.mult(t.b)), 
 					this.a.mult(t.c).add(this.c.mult(t.d)), 
 					this.b.mult(t.c).add(this.d.mult(t.d)));
-					//ComplexNumber.product(_a,tm.a).add(ComplexNumber.product(_c,tm.b)), 
-					//ComplexNumber.product(_b,tm.a).add(ComplexNumber.product(_d,tm.b))
-					//ComplexNumber.product(_a,tm.c).add(ComplexNumber.product(_c,tm.d)), 
-					//ComplexNumber.product(_b,tm.c).add(ComplexNumber.product(_d,tm.d)));
 		},
 		
 		scale: function (w){
@@ -280,21 +262,7 @@ MoebiusTransform.byInitEndVectors = function (z, w) {
 		M.subMatrix(2).determinant());                 
 }
 
-Complex["Infinity"] = new Complex(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
-Complex["Infinity"].toSimpleString = function() {return "Infinity any";};
 
-Complex.prototype.multiplyScalar = function (factor) {
-	if (factor == 0) return Complex["0"];
-	if (this._r) {
-		if (factor < 0)
-			return Complex(this.re*factor, this.i*factor, -this._r*factor, this._t + Math.PI);
-		
-		return Complex(this.re*factor, this.i*factor, this._r*factor, this._t);
-		
-	}
-	
-	return Complex(this.re*factor, this.i*factor);
-}
 
 MoebiusTransform.identity = 
 	new MoebiusTransform (Complex["1"], Complex["0"], Complex["0"], Complex["1"]);

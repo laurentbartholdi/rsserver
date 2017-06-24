@@ -178,6 +178,8 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	td3.setAttribute("valign", "top");
 	var td4 = document.createElement("td");
 	var showArcs = addInput(td4, "checkbox", InterfaceNames.SHOW_ARCS, "change", this.changeShowArcs);
+	if (this.configManager.getConfigValue("showArcs"))
+		showArcs.setAttribute("checked", "checked");
 	td4.setAttribute("width", "20%");
 	td4.setAttribute("valign", "top");
 	
@@ -193,6 +195,8 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	this.rsCanvas.showGrid = showGrid.checked;
 	this.rsCanvas.showLabels = showLabels.checked;
 	this.rsCanvas.showGridChanged = true;
+	this.rsCanvas.showArcs = showArcs.checked;
+	this.rsCanvas.showArcsChanged = true;
 	
 	this.rsCanvas.rsCanvasId = idArg || ("rsCanvas" + document.icautoID++);
 	if (domElement.hasAttribute("id")) this.rsCanvas.serverId = domElement.getAttribute("id");

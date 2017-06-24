@@ -15,11 +15,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	};
     this.handleMouseDown = function(event) {
         mouseDown = true;
-        //console.log("mouse down", that, that.rsCanvasId);
         this.style.cursor = "crosshair";
         var canvasPos = UIU.getMousePos(that.canvas3d, event);
         var its = that.converter.getIntersects(canvasPos);
-		//console.log("choosing selected point", its);
 
         if (its.length) {
         	var sphere_index = -1;
@@ -45,7 +43,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
         				break;
         			}
         		}
-        		//console.log("sphere", sphere_index, "marker", marker_index, curMarker);
         		if ((sphere_index >= 0 && marker_index < 0)|| 
 	        			(marker_index >= 0 && (transformAnchorsValues.length == 1 && curMarker.numInArray !== undefined))) {
 	    	        startRotWorldMousePos = that.converter.canvasPosToWorld(canvasPos);
@@ -54,7 +51,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	    	        rotating = true;
 	        	} else if (marker_index >= 0 && curMarker.numInArray === undefined) {
 	        		movingSelectedPoint = curMarker;
-	        		//console.log("choosing selected point", its[0], its[0].object.marker);
 	        	}
 	        	if (marker_index >= 0 && transformAnchorsValues.length > 1) {
 	        		movingAnchor = curMarker.numInArray;
@@ -82,7 +78,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     			for (var i = 0; i < its.length; i ++) {
     				if (its[i].object == that.sphere) {
 		    			if (event.shiftKey) {
-		    				console.log("shift doubleClick");
 		    				addSelectedPointAnchor(that.sphere.worldToLocal(its[i].point));
 		    			} else {
 		    				addAnchor(dblclickPos);
@@ -119,22 +114,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     this.isMovingSelectedPoint = function( ) {return movingSelectedPoint != null }
     //------------------end event handlers------------------------------------
     
-	/*this.showGrid = function(newShowGrid) {
-		if (newShowGrid !== false) newShowGrid = true;
-		if ( newShowGrid != this.showGrid) {
-			this.showGrid = newShowGrid;
-			updateGrid();
-			this.somethingChanged = true;
-		}
-	};
-	this.hideGrid = function() {this.showGrid(false);},*/
-	
-	/*this.resetTransform = function() {
-		this.setTransform(MoebiusTransform.identity);
-	};*/
 	
 	this.render = function() {
-		//console.log ("render");
 		if (!this.inited) return;
 		var sphereMoved = false;
 		if (mouseMoved) {
@@ -153,7 +134,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 			if (rotating || this.transformUpdated){
 				sphereMoved = true;
-				//that.canvas3d.dispatchEvent(new CustomEvent("sphereMoved"));
 			}
 			mouseMoved = false;
 			this.somethingChanged = true;
@@ -172,7 +152,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		if ( this.showGridChanged) {
 			
 			this.grid.updateGrid();
-			console.log("grid updated!!");
 			for (var i = 0; i < selectedPointsAnchors.length; i++) {
 				this.grid.checkLabelCollisions(selectedPointsAnchors[i]);
 			}
@@ -180,7 +159,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			this.showGridChanged = false;
 			
 		} else if ((this.showGrid || this.showLabels || this.showAbsGrid) && this.transformUpdated) {
-		//} else if ((this.showGrid || this.showLabels || this.showAbsGrid) && this.gridNeedUpdate) {
 			this.grid.updateGrid(true);
 			this.somethingChanged = true;
 		}
@@ -200,13 +178,11 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 			updateAnchors();
 			transformDrawings();
-			console.log(movingAnchor);
 			this.transformUpdated = false;
 			this.linesUpdated = false;
 			this.arcsNeedUpdate = true;
 			this.gridNeedUpdate = true;
 			this.somethingChanged = true;
-			//if (showGrid) updateGrid();		
 		}
 		
 		if (this.linesUpdated ) {
@@ -216,11 +192,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
 
 		if (this.somethingChanged) {
-			if (this.showArcs) console.log(this.scene);
 			this.renderer.render(this.scene, this.camera);
 			this.somethingChanged = false;
 			this.labelManager.checkLabels(true);
-			//this.renderer.render(this.scene, this.camera);
 			
 		}
 
@@ -245,7 +219,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var startRotMatrix = new THREE.Matrix4();
 	var startRotQuaternion = new THREE.Quaternion();
 	var vectorChangeBarrier = 0.01;
-	//var rotationNeedsUpdate = false;
 	var rotQuaternion = new THREE.Quaternion();
 	
 	
@@ -275,10 +248,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	    }
 
 	};
-
-	/*function addAnchor() {};
-	function removeAnchor() {};
-	function updateAnchors() {};*/
 	//----------end transform anchors----------------------------------
 	
 	//-------------drawings--------------------------------------------
@@ -294,19 +263,17 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var drawedLines = [];
 	
 	//Arrays of Complex
-	//var curDrawedLineData = [];
-	//var drawedLinesData = [];
 	this.drawedLinesData = [];
 	this.curDrawedLineData = [];
 	
-	this.arcsColors = [];
+	this.arcStyles = [];
 	this.arcsData = [];
 	this.arcsNum = 0;
 	this.arcs = [];
 	this.arcsNeedUpdate = false;
 	//TODO
 	this.resetArcs = function() {
-		this.arcsColors = [];
+		this.arcStyles = [];
 		this.arcsData = [];
 		this.arcsNum = 0;
 		for (var i = 0; i < this.arcs.length; i++) {
@@ -323,8 +290,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		}
 		for (var i = 0; i < that.arcsData.length; i++){
 			var a = that.arcs[i];
-			a.material.color = that.arcsColors[i];
-			console.log("arc color", a.material.color, that.arcsColors[i]);
+			a.material.color = that.arcStyles[i].color;
+			a.material.linewidth = that.arcStyles[i].width;
 			a.material.needsUpdate = true;
 			curDrawingVertexIndex = 1;
 			if (this.currentTransform.isIdentity() ){
@@ -365,8 +332,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	}
 	function showArcs( arg ) {
 		var val = (arg == undefined ? that.showArcs:arg);
-		console.log("showArcs", that.showArcs, val);
-		
 		for (var i = 0; i < that.arcsData.length; i++) {
 			that.arcs[i].visible = val;
 		}
@@ -461,9 +426,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			
 		}
 		nextDrawedLineIndex ++;
-		//console.log("start draw", this)
 		curDrawingVertexIndex = 1;
-		//curLineVertices = [pos.clone().multiplyScalar(1.2)];
 		lastVertex = pos.clone();
 		
 	}
@@ -553,25 +516,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var maxSegmentLength = 2*RSCanvas.SPHERE_RADIUS*Math.sqrt(lineOverTheSphere*lineOverTheSphere-1);
 	function smartDrawImpl (p1, p2, obj_, center, radius) {
 		var obj = obj_ || lastDrawingLine;
-		//console.log("smartDrawImpl", p1, p2, p1.distanceTo(p2), maxSegmentLength);
 		if (p1.distanceTo(p2) < maxSegmentLength) {
 			drawToImpl(p2, obj);
 		} else {
 			var p0 = getMid(p1, p2, center, radius);
 			smartDrawImpl(p1, p0, obj, center, radius);
 			smartDrawImpl(p0, p2, obj, center, radius);
-			/*
-			var p0 = (new THREE.Vector3()).addVectors(p1, p2).multiplyScalar(.5);
-			if (center) {
-				var r = radius || p1.distanceTo(center);
-				p0.sub(center).setLength(r).add(center);
-				smartDrawImpl(p1, p0, obj, center, r);
-				smartDrawImpl(p0, p2, obj, center, r);
-			} else {
-				p0.setLength(RSCanvas.SPHERE_RADIUS); 
-				smartDrawImpl(p1, p0, obj);
-				smartDrawImpl(p0, p2, obj);
-			}*/
 		}
 	}
 	function drawToImpl (pos, obj) {
@@ -596,10 +546,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		rotAngle = curWorldMousePos.angleTo(startRotWorldMousePos);
 		rotQuaternion.setFromAxisAngle(rotAxis, rotAngle);
 		that.sphere.quaternion.multiplyQuaternions(rotQuaternion, startRotQuaternion);
-		//rotationNeedsUpdate = false;
-		
-		//sphere.material.attributes.normal.needsUpdate = true;
-		//console.log("attr", sphere.material.attributes);
 		
 	}
 	//--------------end rotation----------------------------------------
@@ -642,7 +588,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			transformAnchorsValues[2] = pm.value;
 		}
 		that.somethingChanged = true;
-		console.log("addAnchor", pm, transformAnchorsValues);
 		
 	}
 	
@@ -658,7 +603,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				
 			} else {selectedPointsCount ++;}
 		}
-		console.log(selectedPointsCount, this.selectedPointsLimit);
 		if ((this.selectedPointsLimit == undefined || this.selectedPointsLimit < 0) || selectedPointsCount < that.selectedPointsLimit) {
 			if (firstHiddenPointIndex >= 0 && !pars) {
 				spa = selectedPointsAnchors[firstHiddenPointIndex];
@@ -688,7 +632,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 						spa = new RSTextLabel(pos, that, argParameters);
 					else spa = new RSTextLabelMoveable(pos, that, argParameters);
 				} 
-				else spa = new RSTextLabelMoveable(pos, that);//, "selected point");
+				else spa = new RSTextLabelMoveable(pos, that);
 				selectedPointsAnchors.push(spa);
 				spa.show();
 			}
@@ -703,7 +647,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		if (pm.numInArray !== undefined) {
 			var na = pm.numInArray;
 			transformAnchorsValues.splice(na, 1);
-			//transformAnchorsNum --;
 			var i = -1;
 			while (++i < transformAnchorsValues.length) {
 				pm = transformAnchors[i];
@@ -751,7 +694,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	}
 	//-----------------shader material----------------------------------
 	this.initShaderMaterial = function(geom, shaderMap) {
-		console.log("initShaderMaterial", arguments);
 		if (!shaderMap) shaderMap = new ComplexShaderMap();
 		this.curShaderMap = shaderMap;
 		updateComplexAttribute(geom, shaderMap);
@@ -765,17 +707,13 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				shaderMap.uniforms]);
 
 		                                           
-		console.log("uniforms", uniforms);                                       
 		var shaderMaterial = new THREE.ShaderMaterial({
 			  uniforms:uniforms,
 			  vertexShader: vertexShaderString,
 			  fragmentShader: this.getFragmentShaderString(shaderMap),
 			  lights: true
 			  });
-		console.log("vertexShader", shaderMaterial.vertexShader);
-		console.log("fragmentShader", shaderMaterial.fragmentShader);
 		shaderMaterial.complexShaderMap = shaderMap;
-		console.log("lights", shaderMaterial.lights);
 		return shaderMaterial;
 	}
 	var vertexShaderString = [
@@ -861,7 +799,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                      	                           	"gl_FragColor.xyz *= vLightFront;",
 	                      	                        	"}"
 	                      	                        ].join("\n");
-	                      	console.log("fragmentShader = " + fragmentShaderString);
 	                      	return fragmentShaderString;
 	                      };
 	                      function updateComplexAttribute(geom, shaderMap){
@@ -915,8 +852,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	//------------end private methods-----------------------------------
 
 	                		this.addSelectedPoint= function(z, pars) {
-	                			console.log("addSelectedPoint", z);
-	                			
 	                				var exists = false;
 	                			for (var i = 0; i < selectedPointsAnchors.length; i++){
 	                				if (!selectedPointsAnchors[i].hidden && 
@@ -930,7 +865,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                		};
 	                		this.muteChangeSelectedPointsEvent = false;
 	                		this.addSelectedPoints= function(zs, pars) {
-	                			console.log("!addSelectedPoints", zs);
 	                			for (var i = 0; i < zs.length; i++){
 	                				this.muteChangeSelectedPointsEvent = (i < zs.length - 1);
 	                				if (pars) this.addSelectedPoint(zs[i], pars[i])
@@ -1078,7 +1012,6 @@ RSCanvas.prototype = {
 		addDrawing: function(drawing) {},
 		addDrawings: function(drawings) {},
 		getDrawings: function() {
-			console.log("getDrawings ", this.drawedLinesData);
 			var res = [];
 			for (var i = 0; i < this.drawedLinesData.length; i++){
 				res[i] = this.drawedLinesData[i].slice();
@@ -1145,7 +1078,6 @@ RSCanvas.prototype = {
 			console.log("parse data", data, DATA_IN_XML);
 			if (DATA_IN_XML) {
 				if (typeof data === "string") data = parseXml(data);
-				console.log("after parsing", data);
 				var ddata = data.getElementsByTagName("downdata");
 				if (ddata.length > 0) data = data.getElementsByTagName("downdata")[0];
 				ddata = data.getElementsByTagName("canvas");
@@ -1167,7 +1099,6 @@ RSCanvas.prototype = {
 					var trarr = [];
 					for (var i = 0; i < 4; i ++)
 						trarr.push(Complex.fromXML(transformData.childNodes[i]));
-					//console.log ("transform data", trarr, transformData.childNodes[0].getAttribute("re"));
 					var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
 					console.log ("transform data", trarr, new_transform);
 					this.setTransform(new_transform);
@@ -1263,12 +1194,20 @@ RSCanvas.prototype = {
 					
 					
 					for (var i = 0; i < arcsData.length; i++) {
-						if (arcsData[i].hasAttributes() && arcsData[i].getAttribute("color")) {
-							var cString = arcsData[i].getAttribute("color");
-							this.arcsColors.push(ConfigManager.parseColor(cString));
+						var styleObj = {};
+						var cString = arcsData[i].getAttribute("color"); 
+						if (cString) {
+							styleObj.color = ConfigManager.parseColor(cString)
 						} else {
-							this.arcsColors.push(this.configManager.getConfigValue("arcColor"));
+							styleObj.color = this.configManager.getConfigValue("arcColor");
 						}
+						var wNum = parseFloat(arcsData[i].getAttribute("width"));
+						if (wNum && !isNaN(wNum)) {
+							styleObj.width = wNum;
+						} else {
+							styleObj.width = this.configManager.getConfigValue("arcWidth");
+						}	
+						this.arcStyles.push(styleObj);
 						var curArcData = [];
 						if (arcsData[i].getAttribute("type") == "transformation") {
 							var transformCoefs = arcsData[i].getElementsByTagName("cn");
@@ -1278,6 +1217,7 @@ RSCanvas.prototype = {
 															Complex.fromXML(transformCoefs[1]),
 															Complex.fromXML(transformCoefs[2]),
 															Complex.fromXML(transformCoefs[3]));
+								var arcDataComplex = [t.apply(Complex["0"]), t.apply(Complex(0.5, 0)),t.apply(Complex["1"])];
 								curArcData.push(CU.complexToLocalNormalized(t.apply(Complex["0"])),
 										CU.complexToLocalNormalized(t.apply(Complex(0.5, 0))),
 										CU.complexToLocalNormalized(t.apply(Complex["1"])));
@@ -1409,7 +1349,7 @@ RSCanvas.prototype = {
 						var arcsNumLeft = parseInt(line[1]);
 						if (arcsNumLeft == 0 || line[2]) {
 							//this.arcsData = new Array();
-							//this.arcsColors = new Array();
+							//this.arcStyles = new Array();
 							this.resetArcs();
 							this.arcsNum = arcsNumLeft;
 						}
@@ -1419,7 +1359,7 @@ RSCanvas.prototype = {
 							arcsNumLeft--;
 							var arcHeader = data_arr[++index].split(" ");
 							if (arcHeader[0] == "ARC") {
-								this.arcsColors.push( 
+								this.arcStyles.push( 
 									new THREE.Color("rgb(" + arcHeader[2] + ", " + arcHeader[3] + ", " + arcHeader[4] + ")"));
 								var arcPointsLeft = parseInt(arcHeader[1]);
 								var curArcData = new Array();
@@ -1457,7 +1397,7 @@ RSCanvas.prototype = {
 								console.warn("Invalid ARC entry", arcHeader);
 							}
 						}
-						console.log("Arcs parsed", this.arcsData, this.arcsColors);
+						console.log("Arcs parsed", this.arcsData, this.arcStyles);
 						this.drawArcs();
 					}
 					if (line[0].toLowerCase() == "config") {
@@ -1680,21 +1620,14 @@ RSCanvas.LabelManager = function (rsc) {
 		
 	}
 	this.checkLabels = function (checkCollisions) {
-		//console.log("ceckLabels", this, labels);
 		for (var i = 0; i < labels.length; i++) {
 			if (!labels[i].hidden)
 			labels[i].updateObjectRotation();
-			/*if (checkCollisions) {
-				for (var j = i+1; j < labels.length; j++) 
-					labels[i].checkCollision(labels[j]);
-			}*/
 		}
 	}
 	
 	this.hideLabel = function (label) {
-		//console.log("hideLabel", label.idInManager);
 		for (var i = 0; i < labels.length; i++) {
-			//console.log(i, "hidden", labels[i].hidden, "by", labels[i].hiddenBy);
 			if (labels[i].hidden && labels[i].hiddenBy && labels[i].hiddenBy.idInManager == label.idInManager){
 				labels[i].show();
 				labels[i].updateObjectRotation();

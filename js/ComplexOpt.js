@@ -211,14 +211,44 @@
 	Complex.conj = function (c) {
 		return Complex(c.re,-c.i);
 	};
+	
+	Complex.random = function () {
+		var s = Math.random();
+		if (s == 0) return Complex["0"];
+		s = s/(1+Math.sqrt(1-s*s));
+		if (Math.random() > .5) s = 1/s;
+		return Complex.Polar(s, 2*Math.PI*Math.random());
+	};
+
+	Complex.epsilon = 1e-13;
+
+
+	
+	Complex.prototype.equals = function (z) {
+		return (Math.abs(this.re - z.re) < Complex.epsilon && Math.abs(this.i - z.i) < Complex.epsilon);
+	};
+
 
 	// Multiplication operator
 	Complex.prototype.mult = function (c) {
 		return Complex(this.re*c.re - this.i*c.i, this.re*c.i + this.i*c.re);
 	};
+	Complex.prototype.multiplyScalar = function (factor) {
+		if (factor == 0) return Complex["0"];
+		if (this._r) {
+			if (factor < 0)
+				return Complex(this.re*factor, this.i*factor, -this._r*factor, this._t + Math.PI);
+			
+			return Complex(this.re*factor, this.i*factor, this._r*factor, this._t);
+			
+		}
+		
+		return Complex(this.re*factor, this.i*factor);
+	}
 
 	// Division operator
 	Complex.prototype.divBy = function (c) {
+		if (c.r2() < 1e-26) return Complex["Infinity"]; 
 		return Complex((this.re*c.re + this.i*c.i)/c.r2(), (this.i*c.re - this.re*c.i)/c.r2());//.Polar(this.r()/c.r(),this.t()-c.t());
 	};
 
@@ -730,6 +760,8 @@
 	Complex["E"] = Complex(Math.E,0,Math.E,0);
 	Complex["2"] = Complex(2,0,2,0);
 	Complex["2I"]= Complex(0,2,2,Math.PI/2);
+	Complex["Infinity"] = new Complex(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+	Complex["Infinity"].toSimpleString = function() {return "Infinity any";};
 
 	// Expose the Complex class
 	global.Complex = Complex;
