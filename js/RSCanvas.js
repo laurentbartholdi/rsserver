@@ -293,28 +293,29 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			a.material.linewidth = that.arcStyles[i].width;
 			a.material.needsUpdate = true;
 			curDrawingVertexIndex = 1;
-			if (this.currentTransform.isIdentity() ){
+			if (this.currentTransform.isIdentity() && that.arcStyles[i].type != "transform"){
 				a.geometry.vertices[0] = that.arcsData[i][0].clone().multiplyScalar(lineOverTheSphere);
 				for (var j = 1; j < that.arcsData[i].length; j++) {
 					smartDrawImpl(that.arcsData[i][j-1], that.arcsData[i][j], a);
 				}
 			} else {
 				//TODO give minimal active vertices number, for small circles to look smooth
-				console.log("draw Arcs");
+				//TODO make an arc with a circle geometry
+				//console.log("draw Arcs");
 				var tData = [];
 				for (var j = 0; j < that.arcsData[i].length; j++) {
 					tData.push(CU.transformVector(that.arcsData[i][j], 
 						this.currentTransform));
 				}
-				console.log("draw Arcs: tData", tData);
+				//console.log("draw Arcs: tData", tData);
 				var vStart = tData[0];
 				a.geometry.vertices[0] = vStart.clone().multiplyScalar(lineOverTheSphere);
 				var circleData = GridLine.getCenterRadius(tData);
 				circleData.circleCenter.multiplyScalar(RSCanvas.SPHERE_RADIUS);
 				circleData.radius *= RSCanvas.SPHERE_RADIUS;
-				console.log("draw Arcs: circleData", circleData);
+				//console.log("draw Arcs: circleData", circleData);
 				var saveData = getSaveDrawArcData(tData, circleData.circleCenter, circleData.radius);
-				console.log("draw Arcs: saveData", saveData);
+				//console.log("draw Arcs: saveData", saveData);
 				for (var j = 1; j < saveData.length; j++) {
 					smartDrawImpl(saveData[j-1], saveData[j], a, circleData.circleCenter, circleData.radius);
 				}
@@ -1225,7 +1226,9 @@ RSCanvas.prototype = {
 							styleObj.width = wNum;
 						} else {
 							styleObj.width = this.configManager.getConfigValue("arcWidth");
-						}	
+						}
+						if (arcsData[i].getAttribute("type") == "transformation")
+							styleObj.type = "transform";
 						this.arcStyles.push(styleObj);
 						var curArcData = [];
 						if (arcsData[i].getAttribute("type") == "transformation") {
@@ -1240,6 +1243,9 @@ RSCanvas.prototype = {
 								curArcData.push(CU.complexToLocalNormalized(t.apply(Complex["0"])),
 										CU.complexToLocalNormalized(t.apply(Complex(0.5, 0))),
 										CU.complexToLocalNormalized(t.apply(Complex["1"])));
+								this.arcsData.push([curArcData[0].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    curArcData[1].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    curArcData[2].multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
 							}
 						} else {
 							var sps = arcsData[i].getElementsByTagName("sp");
@@ -1256,29 +1262,30 @@ RSCanvas.prototype = {
 								for (var j = 0; j < sps.length; j++)
 									curArcData.push(spointToVector(sps[j]));
 							}
-						}	
-						var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
-						if (v1.equals(v2)) {
-							var v0 = curArcData[1].normalize();
-							var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
-							this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-							                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-							                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-							                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-						} else {
-							var mid = (new THREE.Vector3()).addVectors(v1, v2);
-							if (mid.length == 0)
-								this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-							else {
-								mid.normalize();
-								var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
+							var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
+							if (v1.equals(v2)) {
+								var v0 = curArcData[1].normalize();
+								var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
 								this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+								                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+							} else {
+								var mid = (new THREE.Vector3()).addVectors(v1, v2);
+								if (mid.length == 0)
+									this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+									                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+								else {
+									mid.normalize();
+									var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
+									this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+									                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+								}
 							}
-						}
+						}	
+						
 					}
 					console.log("arcs parsed", this.arcsData);
 					this.drawArcs();
