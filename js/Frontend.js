@@ -432,7 +432,7 @@ var DATA_IN_XML = true;
 					if (objID && (parentContainer = document.getElementById(objID))) {
 					
 						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
-							var error = populateCanvas(parentContainer, dataElement, objID);
+							var error = populateCanvas(parentContainer, downDataEl, objID);
 							if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
 							else {sendError(error);}
 	

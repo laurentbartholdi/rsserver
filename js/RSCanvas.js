@@ -200,6 +200,15 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
 		
 	}
+	var curObjectID = 0;
+	this.getNewObjectID = function(type) {
+		var res = "";
+		if (this.serverId) res = this.serverId;
+		else if (this.rsCanvasId) res = this.rsCanvasId;
+		res += "UI" + type + (curObjectID++);
+		return res;
+	}
+
 	
 	//------------private vars-------------------------------------------
 	var mouseDown = false;
@@ -260,6 +269,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var curDrawingVertexIndex = 0;
 	var maxDrawingBufferSize = 1000;
 	var lineOverTheSphere = 1.001;//1.01;
+	var minCircleSegments = 24;
 	var drawedLines = [];
 	
 	//Arrays of Complex
@@ -299,23 +309,18 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					smartDrawImpl(that.arcsData[i][j-1], that.arcsData[i][j], a);
 				}
 			} else {
-				//TODO give minimal active vertices number, for small circles to look smooth
 				//TODO make an arc with a circle geometry
-				//console.log("draw Arcs");
 				var tData = [];
 				for (var j = 0; j < that.arcsData[i].length; j++) {
 					tData.push(CU.transformVector(that.arcsData[i][j], 
 						this.currentTransform));
 				}
-				//console.log("draw Arcs: tData", tData);
 				var vStart = tData[0];
 				a.geometry.vertices[0] = vStart.clone().multiplyScalar(lineOverTheSphere);
 				var circleData = GridLine.getCenterRadius(tData);
 				circleData.circleCenter.multiplyScalar(RSCanvas.SPHERE_RADIUS);
 				circleData.radius *= RSCanvas.SPHERE_RADIUS;
-				//console.log("draw Arcs: circleData", circleData);
 				var saveData = getSaveDrawArcData(tData, circleData.circleCenter, circleData.radius);
-				//console.log("draw Arcs: saveData", saveData);
 				for (var j = 1; j < saveData.length; j++) {
 					smartDrawImpl(saveData[j-1], saveData[j], a, circleData.circleCenter, circleData.radius);
 				}
@@ -366,14 +371,11 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 		} else {
 			var m = getMid(startData[0], startData[startData.length-1], center, radius);
-			console.log ("m=",m, "center", center, "r", radius);
 			if (m.distanceTo(startData[0]) < m.distanceTo(startData[1])) {
 				if (center) {
 					m.multiplyScalar(-.5).add(center).multiplyScalar(2);
-					console.log("if center", m);
 				}
 				else {
-					console.log("if center..else", m);
 					m.negate();
 				}
 			}
@@ -381,7 +383,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			
 		}
 		res.push(startData[startData.length - 1]);	
-		console.log("getSaveArcData", startData, res);
 		return res;
 	}
 	var curArcVertex = 0;
@@ -410,6 +411,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			that.curDrawedLineData.push(CU.localToComplex(pos, that.currentTransform));
 		} else {
 			that.curDrawedLineData = [CU.localToComplex(pos, that.currentTransform)];
+			that.curDrawedLineData.id = that.getNewObjectID("line");
 			that.drawedLinesData.push(that.curDrawedLineData);
 		}
 		
@@ -517,7 +519,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var maxSegmentLength = 2*RSCanvas.SPHERE_RADIUS*Math.sqrt(lineOverTheSphere*lineOverTheSphere-1);
 	function smartDrawImpl (p1, p2, obj_, center, radius) {
 		var obj = obj_ || lastDrawingLine;
-		if (p1.distanceTo(p2) < maxSegmentLength) {
+		var curMaxSegment = (radius ? Math.min(maxSegmentLength, 2*Math.PI*radius/minCircleSegments) : maxSegmentLength);
+		if (p1.distanceTo(p2) < curMaxSegment) {
 			drawToImpl(p2, obj);
 		} else {
 			var p0 = getMid(p1, p2, center, radius);
@@ -534,6 +537,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		obj.visible = true;
 		if (curDrawingVertexIndex >= maxDrawingBufferSize) {startDrawImpl(pos);}
 	}
+	
 
 
 	//-------------end drawings----------------------------------------
@@ -593,6 +597,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	}
 	
 	var selectedPointsAnchors = [];
+	var selectedPointsData = [];
 	
 	function addSelectedPointAnchor (pos, pars) {
 		var spa; 
@@ -604,7 +609,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				
 			} else {selectedPointsCount ++;}
 		}
-		if ((this.selectedPointsLimit == undefined || this.selectedPointsLimit < 0) || selectedPointsCount < that.selectedPointsLimit) {
+		if ((that.selectedPointsLimit == undefined || that.selectedPointsLimit < 0) || selectedPointsCount < that.selectedPointsLimit) {
 			if (firstHiddenPointIndex >= 0 && !pars) {
 				spa = selectedPointsAnchors[firstHiddenPointIndex];
 				spa.show();
@@ -637,7 +642,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				selectedPointsAnchors.push(spa);
 				spa.show();
 			}
-			if (!this.muteChangeSelectedPointsEvent)
+			if (!pars) pars = {};
+			if (!pars.id) pars.id = that.getNewObjectID("point");
+			pars.anchor = spa;
+			selectedPointsData.push(pars);
+
+			if (!that.muteChangeSelectedPointsEvent)
 				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged"));
 			that.grid.checkLabelCollisions(spa);
 
@@ -659,6 +669,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 		} else {
 			pm.hide();
+			for (var j = 0; j < selectedPointsData.length; j++)
+				if (selectedPointsData[j].anchor == pm) selectedPointsData.splice(j--, 1);
+					
 			that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged"));
 
 			
@@ -880,6 +893,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                		};
 	                		this.removeAllSelectedPoints = function() {
 	                			var l = selectedPointsAnchors.length;
+	                			selectedPointsData = [];
 	                			for (var i = 0; i < l; i++) {
 	                				selectedPointsAnchors[i].hide();
 	                			}
@@ -893,6 +907,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	                			}
 	                			return res;
 	                		};
+	                		this.getSelectedPointsData = function() {
+	                			return selectedPointsData.slice(0);
+	                		}
 	                		this.checkSelectedPointsGridLabelsCollisions = function() {
 	                			for (var i = 0; i < selectedPointsAnchors.length; i++) {
 	                				if (!selectedPointsAnchors[i].hidden) 
@@ -959,8 +976,7 @@ RSCanvas.prototype = {
 
 			this.scene = new THREE.Scene();
 			this.camera = new THREE.PerspectiveCamera( RSCanvas.CAMERA_FOV, this.canvas3d.width / this.canvas3d.height, 0.1, 1000 );
-			//setStyleConstants();
-			console.log("canvas3d", this.canvas3d, "sphere", this.sphere);
+
 			this.renderer = new THREE.WebGLRenderer({canvas: this.canvas3d});
 
 			this.renderer.setSize( this.canvas3d.width, this.canvas3d.height );
@@ -1015,7 +1031,8 @@ RSCanvas.prototype = {
 		getDrawings: function() {
 			var res = [];
 			for (var i = 0; i < this.drawedLinesData.length; i++){
-				res[i] = this.drawedLinesData[i].slice();
+				res[i] = this.drawedLinesData[i].slice(0);
+				if (this.drawedLinesData[i].hasOwnProperty("id")) res[i].id = this.drawedLinesData[i].id;
 			}
 			return res;
 		},
@@ -1047,13 +1064,27 @@ RSCanvas.prototype = {
 			transformEl.appendChild(this.currentTransform.d.toXMLObj());
 			snapshotXMLObj.appendChild(transformEl);
 
-			var pts = this.getSelectedPoints();
-			for (var i = 0; i < pts.length; i++) {
-				snapshotXMLObj.appendChild(createEmptyNode("point")).appendChild(pts[i].toXMLObj());
+			var ptsData = this.getSelectedPointsData();
+			for (var i = 0; i < ptsData.length; i++) {
+				var pntEl = createEmptyNode("point");
+				pntEl.appendChild(ptsData[i].anchor.value.toXMLObj());
+				pntEl.setAttribute("id", ptsData[i].id);
+				if (ptsData[i].message) {
+					var lbl = createEmptyNode("label");
+					lbl.appendChild(document.createTextNode(ptsData[i].message));					
+					pntEl.appendChild(lbl);
+				}
+				if (ptsData[i].color) pntEl.setAttribute("color", ptsData[i].color);
+				if (ptsData[i].radius) pntEl.setAttribute("radius", ptsData[i].radius);
+				if (ptsData[i].hasOwnProperty("movable")) pntEl.setAttribute("movable", ptsData[i].movable);
+				if (this.serverId) pntEl.setAttribute("canvas", this.serverId);
+				
+				snapshotXMLObj.appendChild(pntEl);
 			}
 			var drw = this.getDrawings();
 			for (var i = 0; i < drw.length; i++) {
 				var lineXMLObj = snapshotXMLObj.appendChild(createEmptyNode("line"));
+				if (drw[i].hasOwnProperty("id")) lineXMLObj.setAttribute("id", drw[i].id);
 				for (var j = 0; j < drw[i].length; j++ ) {
 					lineXMLObj.appendChild(drw[i][j].toXMLObj());
 				}
@@ -1071,6 +1102,8 @@ RSCanvas.prototype = {
 					var arcEl = createEmptyNode("arc");
 					arcEl.setAttribute("color", "#" + this.arcStyles[i].color.getHexString());
 					arcEl.setAttribute("width", this.arcStyles[i].width);
+					if (this.arcStyles[i].hasOwnProperty.id) arcEl.setAttribute("id", arcStyles[i].id);
+					if (this.serverId) arcEl.setAttribute("canvas", this.serverId);
 					for (var j = 0; j < this.arcsData[i].length; j++)
 						arcEl.appendChild(getSpElement(this.arcsData[i][j]));
 					snapshotXMLObj.appendChild(arcEl);
@@ -1151,6 +1184,7 @@ RSCanvas.prototype = {
 						readAttribute("color", i);
 						readAttribute("radius", i);
 						readAttribute("movable", i);
+						readAttribute("id", i);
 					}
 					this.addSelectedPoints(pts, params);
 					pointsParsed = true;
@@ -1192,6 +1226,8 @@ RSCanvas.prototype = {
 								newLine.push(Complex.fromXML (linesData[i].childNodes[j]));
 							}
 						}
+						if (linesData[i].getAttribute("id")) newLine.id = linesData[i].getAttribute("id");
+						else newLine.id = this.getNewObjectID("line");
 						this.drawedLinesData.push(newLine);
 					}
 					console.log("lines parsed", this.drawedLinesData);
@@ -1229,6 +1265,8 @@ RSCanvas.prototype = {
 						}
 						if (arcsData[i].getAttribute("type") == "transformation")
 							styleObj.type = "transform";
+						if (arcsData[i].getAttribute("id")) styleObj.id = arcsData[i].getAttribute("id");
+						else styleObj.id = this.getNewObjectID("arc");
 						this.arcStyles.push(styleObj);
 						var curArcData = [];
 						if (arcsData[i].getAttribute("type") == "transformation") {
