@@ -336,6 +336,7 @@ function processDownData(data, callback){
 }
 
 function checkObjectID(session, object, type, tempUsedIds) {
+	console.log("ceckObjectID", session, object, type);
 	var err="";
 	if (object.$ && object.$.id) {
 		if (!isObjectIdNew(session, object.$.id)) err = "Id " + object.$.id + " is already in use";
@@ -360,7 +361,8 @@ function processUpData (id, message, callback) {
 				if (resultObj.error) err = resultObj.error
 				else err = "invalid xml tag (updata expected) or empty element";
 				
-			} else { 
+			} else {
+				if (resultObj.updata == "empty") resultObj.updata = {};
 				if (!resultObj.updata.$) resultObj.updata.$ = {};
 				var a = resultObj.updata.$;
 				var ws = connections[id];
@@ -384,7 +386,6 @@ function processUpData (id, message, callback) {
 				}
 				else {
 					//TODO process info
-
 					if (!a.status) a.status = "updated";
 					a.session = ws.session;
 					if (!a.object) {
@@ -458,7 +459,7 @@ function getConnectionsList() {
 }
 function displayError(err) {
 	console.error(err);
-	if (err.substring(0, 7) != "<updata") err = "<updata status='error'>" + err + "</updata>\n";
+	if (err.toString().substring(0, 7) != "<updata") err = "<updata status='error'>" + err.toString() + "</updata>\n";
 	if (tcpSocket) tcpSocket.write(err);
 	
 }
