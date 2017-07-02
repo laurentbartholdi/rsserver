@@ -90,7 +90,8 @@ var DATA_IN_XML = true;
 			if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
 				pageElement.rscc = rscc;
 				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
-				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onSelectedPointsChanged);
+				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasObjectsChanged);
+				rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasObjectsChanged);
 			}
 			else return "Error creating canvas";
 			
@@ -111,7 +112,7 @@ var DATA_IN_XML = true;
 			return dataObject;
 			
 		}
-		function onSelectedPointsChanged(event) {
+		function onCanvasObjectsChanged(event) {
 			
 			var updata = createEmptyNode("updata");
 			console.log("selected points event catched", event, event.target);
@@ -131,7 +132,7 @@ var DATA_IN_XML = true;
 				
 
 			} else {
-				console.error("No detail for selectedPointsChange event");
+				console.error("No detail for selectedPointsChanged or arcsChanged event");
 			}
 			
 			
@@ -465,9 +466,6 @@ var DATA_IN_XML = true;
 					
 						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
 							var error = populateCanvas(parentContainer, downDataEl, objID);
-							//TODO!! send more detailed acknowlegment 
-							//if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
-							
 							if (!error) {
 								var news = parentContainer.rscc.rsCanvas.readNewElements();
 								if (news.length > 0) {
@@ -575,27 +573,63 @@ var DATA_IN_XML = true;
 								}
 								
 							}
-						} else if (action=="request") {
-							//TODO
-							var windowNode = resEl.appendChild(createEmptyNode("window"));
-							var error = "";
-							for (var e in mCCDOMElement.childNodes ) {
-								
-								if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
-									error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
-							}
-							if (error) sendError(error)
-							else {
-								resEl.setAttribute("status", "info");
-								sendData({data:xmlSerializer.serializeToString(resEl)});
-							} 
+						
 								
 						} else {
-								sendError ("No object with id " + objID + " found");
+							var containers = document.getElementsByClassName("element-container");
+							var elementInCanvas = false;
+							for (var i = 0; i < containers.length; i++) {
+								if (containers[i].getAttribute("contains") == "canvas") {
+									if (containers[i].rscc && containers[i].rscc.rsCanvas &&
+											containers[i].rscc.rsCanvas.hasObject(objID)) {
+										
+										elementInCanvas = true;
+										var tp = containers[i].rscc.rsCanvas.hasObject(objID);
+										switch (action) {
+										case "remove": {
+											if (tp == "point" || tp == "arc")
+												containers[i].rscc.rsCanvas.removeObject(objID);
+											else sendError("Removing of " + tp + " is not implemented yet");//TODO
+											break;
+										}
+										case "request": {
+											var infoEl = containers[i].rscc.rsCanvas.getObjectInfo(objID);
+											resEl.setAttribute("status", "info");
+											resEl.setAttribute("object", containers[i].rscc.rsCanvas.serverId);
+											resEl.appendChild(infoEl);
+											sendData({data:xmlSerializer.serializeToString(resEl)});
+											break;
+											
+										}
+										default : {
+											sendError("No action " + action + " available for object inside a canvas");
+										}
+										}										
+									}
+								}
+							}
+							if (!elementInCanvas) {
+							 if (action=="request") {
+								var windowNode = resEl.appendChild(createEmptyNode("window"));
+								var error = "";
+								for (var e in mCCDOMElement.childNodes ) {
+									
+									if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
+										error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
+								}
+								if (error) sendError(error)
+								else {
+									resEl.setAttribute("status", "info");
+									sendData({data:xmlSerializer.serializeToString(resEl)});
+								} 
+								
+								
+							} else sendError ("No object with id " + objID + " found");
 						}
 					}
 				}
-			};
+			}
+		};
 		
 		function updateCanvas (configObj) {
 			mainCanvasContainer.updateCanvas(configObj);

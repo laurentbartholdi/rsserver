@@ -217,6 +217,45 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		res += "UI" + type + (curObjectID++);
 		return res;
 	}
+	
+	this.removeObject = function (id) {
+		var ptsData = this.getSelectedPointsData();
+		for (var i = 0; i < ptsData.length; i++){
+			if (ptsData[i].id == id) {
+				removeAnchor(ptsData[i].anchor);
+				return true
+			};				
+		}
+		var drw = this.getDrawings();
+		for (var i = 0; i < drw.length; i++) {
+			if (drw[i].id == id) {/*TODO*/return true};
+		}
+		for (var i = 0; i < this.arcStyles.length; i++){
+			if (this.arcStyles[i].id == id) {
+				removeArc(i);
+				return true};
+		}
+		return false;
+	}
+	
+	this.getObjectInfo = function (id) {
+		var ptsData = this.getSelectedPointsData();
+		for (var i = 0; i < ptsData.length; i++){
+			if (ptsData[i].id == id) {				
+				return this.getSnapshotObjectElement("point", ptsData[i]);
+			};				
+		}
+		var drw = this.getDrawings();
+		for (var i = 0; i < drw.length; i++) {
+			if (drw[i].id == id) {return this.getSnapshotObjectElement("line", drw[i]);};
+		}
+		for (var i = 0; i < this.arcStyles.length; i++){
+			if (this.arcStyles[i].id == id) {return this.getSnapshotObjectElement("arc", this.arcStyles[i]);};
+		}
+		return false;
+		
+	}
+
 
 	
 	//------------private vars-------------------------------------------
@@ -244,8 +283,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var transformAnchors = [];
 	var transformAnchorsValues = [];
 	
+	//When an object is created, addNewElement is called and information 
+	//about created object is stored in newElements until readNewElements is called
 	var newElements = [];
-	
 	this.addNewElement = function (node) {newElements.push(node)}
 	this.readNewElements = function () {
 		var res = [];
@@ -321,6 +361,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			a.material.color = that.arcStyles[i].color;
 			a.material.linewidth = that.arcStyles[i].width;
 			a.material.needsUpdate = true;
+			that.arcStyles[i].data = that.arcsData[i];
 			curDrawingVertexIndex = 1;
 			if (this.currentTransform.isIdentity() && that.arcStyles[i].type != "transform"){
 				a.geometry.vertices[0] = that.arcsData[i][0].clone().multiplyScalar(lineOverTheSphere);
@@ -354,6 +395,13 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		}
 		showArcs();
 		
+	}
+	function removeArc(index) {
+		that.arcsData.splice(index, 1);
+		that.sphere.remove(that.arcs.splice(index, 1)[0]);
+		that.canvas3d.dispatchEvent(new CustomEvent("arcsChanged", {detail:{action: "removed", object: that.arcStyles.splice(index, 1)[0].id}}));
+		that.arcsNeedUpdate = true;
+		that.somethingChanged = true;
 	}
 	function showArcs( arg ) {
 		var val = (arg == undefined ? that.showArcs:arg);
@@ -1158,8 +1206,9 @@ RSCanvas.prototype = {
 			}
 			el.setAttribute("color", "#" + data.color.getHexString());
 			el.setAttribute("width", data.width);
-			for (var j = 0; j < data.length; j++)
-				el.appendChild(getSpElement(data[j]));
+			if (Array.isArray(data.data))
+				for (var j = 0; j < data.data.length; j++)
+					el.appendChild(getSpElement(data.data[j]));
 			return el;
 		},
 
@@ -1170,7 +1219,20 @@ RSCanvas.prototype = {
 			//if (filename.indexOf(".") == -1) filename += ".txt";
 			saveAs (new Blob([str], {type: "text/plain;charset=utf-8"}), filename);
 		},
-		
+		hasObject: function (id) {
+			var ptsData = this.getSelectedPointsData();
+			for (var i = 0; i < ptsData.length; i++){
+				if (ptsData[i].id == id) return "point";				
+			}
+			var drw = this.getDrawings();
+			for (var i = 0; i < drw.length; i++) {
+				if (drw[i].id == id) return "line";
+			}
+			for (var i = 0; i < this.arcStyles.length; i++){
+				if (this.arcStyles[i].id == id) return "arc";
+			}
+			return false;
+		}, 
 		parseData: function(data) {
 			console.log("parse data", data, DATA_IN_XML);
 			if (DATA_IN_XML) {
@@ -1293,7 +1355,7 @@ RSCanvas.prototype = {
 						return v.normalize();
 					}
 					
-					
+					var arcsAdded = 0;
 					for (var i = 0; i < arcsData.length; i++) {
 						var styleObj = {};
 						var cString = arcsData[i].getAttribute("color"); 
@@ -1310,10 +1372,8 @@ RSCanvas.prototype = {
 						}
 						if (arcsData[i].getAttribute("type") == "transformation")
 							styleObj.type = "transform";
-						if (arcsData[i].getAttribute("id")) styleObj.id = arcsData[i].getAttribute("id");
-						else styleObj.id = this.getNewObjectID("arc");
-						this.arcStyles.push(styleObj);
 						var curArcData = [];
+						var succes = false;
 						if (arcsData[i].getAttribute("type") == "transformation") {
 							var transformCoefs = arcsData[i].getElementsByTagName("cn");
 							if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at four <cn> child nodes", arcsData[i]);
@@ -1329,6 +1389,7 @@ RSCanvas.prototype = {
 								this.arcsData.push([curArcData[0].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    curArcData[1].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    curArcData[2].multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+								succes = true;
 							}
 						} else {
 							var sps = arcsData[i].getElementsByTagName("sp");
@@ -1353,6 +1414,7 @@ RSCanvas.prototype = {
 								                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+								succes = true;
 							} else {
 								var mid = (new THREE.Vector3()).addVectors(v1, v2);
 								if (mid.length == 0)
@@ -1366,12 +1428,24 @@ RSCanvas.prototype = {
 									                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
 									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
 								}
+								succes = true;
 							}
-						}	
+						}
+						if (succes) {
+							if (arcsData[i].getAttribute("id")) styleObj.id = arcsData[i].getAttribute("id");
+							else styleObj.id = this.getNewObjectID("arc");
+							this.arcStyles.push(styleObj);
+							arcsAdded++;
+							
+						}
 						
 					}
-					console.log("arcs parsed", this.arcsData);
 					this.drawArcs();
+					while(arcsAdded > 0){
+						this.addNewElement(this.getSnapshotObjectElement("arc", this.arcStyles[this.arcStyles.length - (arcsAdded--)]));
+					}
+					this.canvas3d.dispatchEvent(new CustomEvent("arcsChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
+					console.log("arcs parsed", this.arcsData);
 					arcsParsed = true;
 				}
 				var configData = data.getElementsByTagName("config");
