@@ -90,6 +90,7 @@ var DATA_IN_XML = true;
 			if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
 				pageElement.rscc = rscc;
 				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
+				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onSelectedPointsChanged);
 			}
 			else return "Error creating canvas";
 			
@@ -108,6 +109,31 @@ var DATA_IN_XML = true;
 			var dataObject = parseJuliaData(dataStructure);  //in DataParse.js
 			//TODO precess bitmap
 			return dataObject;
+			
+		}
+		function onSelectedPointsChanged(event) {
+			
+			var updata = createEmptyNode("updata");
+			console.log("selected points event catched", event, event.target);
+			if (event.detail) {
+				updata.setAttribute("status", event.detail.action);
+				updata.setAttribute("object", event.detail.object);
+				if (Array.isArray(event.detail.data))
+					for (var i = 0; i < event.detail.data.length; i ++)
+						updata.appendChild(event.detail.data[i]);
+				else if (event.detail.data) updata.appendChild(event.detail.data);
+				var evt=new CustomEvent("SnapshotSaved", {data: "",  __exposedProps__ : { data : "r"}});
+				evt.data = xmlSerializer.serializeToString(updata);
+				console.log("end of selectedpoints event handler", evt.data);
+				if (evt.data)
+
+				event.target.dispatchEvent(evt);
+				
+
+			} else {
+				console.error("No detail for selectedPointsChange event");
+			}
+			
 			
 		}
 		
@@ -286,6 +312,11 @@ var DATA_IN_XML = true;
 			logView.appendChild(hideBtn);
 			logView.appendChild(dataBlock);
 			clearDataBlock();
+			/** /
+			var crashBtn = document.createElement("button");
+			crashBtn.appendChild(document.createTextNode("crash"));
+			crashBtn.addEventListener("click", function(evt){sendData({data: "<updata/>"});});
+			logView.appendChild(crashBtn); /**/
 			return logView;
 			
 			
@@ -397,6 +428,7 @@ var DATA_IN_XML = true;
 			else reportStatus("Connection is not defined", "error");
 		}
 		function sendError(message) {
+			//TODO send parsing errors from canvas
 			reportStatus(message, "error");
 			if (connection) connection.send("<updata status='error'><error>" + message + "</error></updata>");
 		}
@@ -433,7 +465,22 @@ var DATA_IN_XML = true;
 					
 						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
 							var error = populateCanvas(parentContainer, downDataEl, objID);
-							if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
+							//TODO!! send more detailed acknowlegment 
+							//if (!error) {sendData({data:"<updata status='updated' object='"+objID+"'/>"})}
+							
+							if (!error) {
+								var news = parentContainer.rscc.rsCanvas.readNewElements();
+								if (news.length > 0) {
+									resEl.setAttribute("status", "created");
+									resEl.setAttribute("object", objID);
+									//resEl.
+									for (var ii = 0; ii< news.length; ii++)
+										resEl.appendChild(news[ii]);
+									sendData({data:xmlSerializer.serializeToString(resEl)});
+								} else {
+									sendData({data:"<updata status='updated' object='" + objID + "'/>"});
+								}
+							}
 							else {sendError(error);}
 	
 						} else if (action == "remove") {
@@ -481,6 +528,7 @@ var DATA_IN_XML = true;
 									if (!error) {
 										resEl.setAttribute("status", "updated");
 										resEl.setAttribute("object", objID);
+										getElementInfo(container, resEl);
 										sendData({data:xmlSerializer.serializeToString(resEl)}); 
 	
 									}

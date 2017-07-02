@@ -93,6 +93,16 @@ var RSCanvas = function(canvas, materialData, canvasData) {
         drawingOnTheSphere = false;
         rotating = false;
         movingAnchor = -1;
+        //console.log("handle MouseUp", movingSelectedPoint, selectedPointsData);
+        if (movingSelectedPoint && movingSelectedPoint.numInArray === undefined){
+        	for (var i = 0; i < selectedPointsData.length; i++)
+        		if (selectedPointsData[i].anchor == movingSelectedPoint) {
+        				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", 
+        						{detail: {action: "updated", 
+        							object: that.serverId,
+        							data: that.getSnapshotObjectElement("point", selectedPointsData[i])}}));
+        		}
+        }
         movingSelectedPoint = null;   
         that.canvas3d.style.cursor = "default";
     };
@@ -129,7 +139,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 			if (movingSelectedPoint) {
 				movingSelectedPoint.setPosition(curMouseLocalPos);
-				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged"));
 				this.grid.checkLabelCollisions(movingSelectedPoint);
 			}
 			if (rotating || this.transformUpdated){
@@ -234,6 +243,16 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	
 	var transformAnchors = [];
 	var transformAnchorsValues = [];
+	
+	var newElements = [];
+	
+	this.addNewElement = function (node) {newElements.push(node)}
+	this.readNewElements = function () {
+		var res = [];
+		while(newElements.length > 0)
+			res.push(newElements.shift());
+		return res;
+	}
 	
 
 	//------------end private vars---------------------------------------
@@ -646,9 +665,10 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			if (!pars.id) pars.id = that.getNewObjectID("point");
 			pars.anchor = spa;
 			selectedPointsData.push(pars);
+			that.addNewElement(that.getSnapshotObjectElement("point", pars));
 
 			if (!that.muteChangeSelectedPointsEvent)
-				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged"));
+				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "created", object: that.serverId, data: that.readNewElements()}}));
 			that.grid.checkLabelCollisions(spa);
 
 		}
@@ -669,10 +689,15 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			}
 		} else {
 			pm.hide();
+			var curId = "";
 			for (var j = 0; j < selectedPointsData.length; j++)
-				if (selectedPointsData[j].anchor == pm) selectedPointsData.splice(j--, 1);
-					
-			that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged"));
+				if (selectedPointsData[j].anchor == pm) {
+					curId = selectedPointsData[j].id;
+					selectedPointsData.splice(j--, 1);
+				}
+			if (curId) {
+				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "removed", object: curId}}));
+			}
 
 			
 		}
@@ -1066,29 +1091,63 @@ RSCanvas.prototype = {
 
 			var ptsData = this.getSelectedPointsData();
 			for (var i = 0; i < ptsData.length; i++) {
-				var pntEl = createEmptyNode("point");
-				pntEl.appendChild(ptsData[i].anchor.value.toXMLObj());
-				pntEl.setAttribute("id", ptsData[i].id);
-				if (ptsData[i].message) {
-					var lbl = createEmptyNode("label");
-					lbl.appendChild(document.createTextNode(ptsData[i].message));					
-					pntEl.appendChild(lbl);
-				}
-				if (ptsData[i].color) pntEl.setAttribute("color", ptsData[i].color);
-				if (ptsData[i].radius) pntEl.setAttribute("radius", ptsData[i].radius);
-				if (ptsData[i].hasOwnProperty("movable")) pntEl.setAttribute("movable", ptsData[i].movable);
-				if (this.serverId) pntEl.setAttribute("canvas", this.serverId);
-				
-				snapshotXMLObj.appendChild(pntEl);
+				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("point", ptsData[i]));
 			}
 			var drw = this.getDrawings();
 			for (var i = 0; i < drw.length; i++) {
-				var lineXMLObj = snapshotXMLObj.appendChild(createEmptyNode("line"));
-				if (drw[i].hasOwnProperty("id")) lineXMLObj.setAttribute("id", drw[i].id);
-				for (var j = 0; j < drw[i].length; j++ ) {
-					lineXMLObj.appendChild(drw[i][j].toXMLObj());
+				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("line", drw[i]));
+			}
+			for (var i = 0; i < this.arcStyles.length; i++) {
+				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("arc", this.arcStyles[i]));
+			}
+			if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
+				if (this.funcXML) {
+					snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
 				}
 			}
+			return snapshotXMLObj;
+			
+		},
+		
+		getSnapshotObjectElement: function (type, data) {
+			var el = createEmptyNode(type);
+			if (!data) console.error("Invalid snapshot argument", type, data);
+			else {
+				if (data.hasOwnProperty("id")) el.setAttribute("id", data.id);
+				if (this.serverId) el.setAttribute("canvas", this.serverId);
+				switch (type) {
+					case "point": return this.getSnapshotPointElement(data, el); break;
+					case "line": return this.getSnapshotLineElement(data, el); break;
+					case "arc": return this.getSnapshotArcElement(data, el); break;
+					default: console.error("Unknow element type", type);
+				}
+			}
+		}, 
+		
+		getSnapshotPointElement: function(data, pntEl){
+			pntEl.appendChild(data.anchor.value.toXMLObj());
+			if (data.message) {
+				var lbl = createEmptyNode("label");
+				lbl.appendChild(document.createTextNode(data.message));					
+				pntEl.appendChild(lbl);
+			}
+			if (data.color) pntEl.setAttribute("color", data.color);
+			if (data.radius) pntEl.setAttribute("radius", data.radius);
+			if (data.hasOwnProperty("movable")) pntEl.setAttribute("movable", data.movable);
+
+			return pntEl;
+			
+		} ,
+		
+		getSnapshotLineElement: function(data, el) {
+			for (var j = 0; j < data.length; j++ ) {
+				el.appendChild(data[j].toXMLObj());
+			}
+			return el;
+			
+		}, 
+		
+		getSnapshotArcElement: function (data, el) {
 			function getSpElement(vector) {
 				var spEl = createEmptyNode("sp");
 				var v = vector.clone().normalize();
@@ -1097,25 +1156,11 @@ RSCanvas.prototype = {
 				spEl.setAttribute("z", v.z);
 				return spEl;
 			}
-			if (this.arcsData.length > 0) {
-				for (var i = 0; i < this.arcsData.length; i++) {
-					var arcEl = createEmptyNode("arc");
-					arcEl.setAttribute("color", "#" + this.arcStyles[i].color.getHexString());
-					arcEl.setAttribute("width", this.arcStyles[i].width);
-					if (this.arcStyles[i].hasOwnProperty.id) arcEl.setAttribute("id", arcStyles[i].id);
-					if (this.serverId) arcEl.setAttribute("canvas", this.serverId);
-					for (var j = 0; j < this.arcsData[i].length; j++)
-						arcEl.appendChild(getSpElement(this.arcsData[i][j]));
-					snapshotXMLObj.appendChild(arcEl);
-				}
-			}
-			if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
-				if (this.funcXML) {
-						snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
-				}
-			}
-			return snapshotXMLObj;
-			
+			el.setAttribute("color", "#" + data.color.getHexString());
+			el.setAttribute("width", data.width);
+			for (var j = 0; j < data.length; j++)
+				el.appendChild(getSpElement(data[j]));
+			return el;
 		},
 
 		saveSnapshotToFile: function(name) {
