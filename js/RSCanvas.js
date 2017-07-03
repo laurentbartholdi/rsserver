@@ -196,6 +196,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		
 		if (this.linesUpdated ) {
 			transformDrawings();
+			this.linesUpdated = false;
 			this.somethingChanged = true;
 		}
 
@@ -484,12 +485,15 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		
 	}
 	function startDrawImpl(pos) {
-		if (nextDrawedLineIndex < drawedLines.length)
-			lastDrawingLine = drawedLines[nextDrawedLineIndex]
+		if (nextDrawedLineIndex < drawedLines.length) {
+			lastDrawingLine = drawedLines[nextDrawedLineIndex];
+			lastDrawingLine.geometry.vertices[0]=pos.clone().multiplyScalar(lineOverTheSphere);
+		}
 		else {
-			lastDrawingLine = new THREE.Line(new THREE.Geometry({vertices: [pos.clone().multiplyScalar(lineOverTheSphere)]}), 
+			lastDrawingLine = new THREE.Line(new THREE.Geometry(), 
 				new THREE.LineBasicMaterial({color: RSCanvas.drawingColor}));
 			drawedLines.push(lastDrawingLine);
+			lastDrawingLine.geometry.vertices.push(pos.clone().multiplyScalar(lineOverTheSphere));
 			while (lastDrawingLine.geometry.vertices.length < maxDrawingBufferSize)
 				lastDrawingLine.geometry.vertices.push(new THREE.Vector3());
 			that.sphere.add(lastDrawingLine);
@@ -1099,8 +1103,6 @@ RSCanvas.prototype = {
 		getTransform: function() {
 			return this.currentTransform.copy();
 		},
-		addDrawing: function(drawing) {},
-		addDrawings: function(drawings) {},
 		getDrawings: function() {
 			var res = [];
 			for (var i = 0; i < this.drawedLinesData.length; i++){
