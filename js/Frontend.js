@@ -92,6 +92,7 @@ var DATA_IN_XML = true;
 				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
 				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasObjectsChanged);
 				rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasObjectsChanged);
+				rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasObjectsChanged);
 			}
 			else return "Error creating canvas";
 			
@@ -108,7 +109,7 @@ var DATA_IN_XML = true;
 			//returns an object that can be passed to InitJuliaMap() and getOutputDomELement
 			var dataStructure = xmlToStrings(dataElement); //in DataParser.js
 			var dataObject = parseJuliaData(dataStructure);  //in DataParse.js
-			//TODO precess bitmap
+			//TODO process bitmap
 			return dataObject;
 			
 		}
@@ -327,99 +328,69 @@ var DATA_IN_XML = true;
 			
 			function addElement (dataNode, resEl) {
 				console.log("Adding element ", dataNode);
-				//returns error string or nothing, if everething is Ok
+				//returns error string or nothing, if everything is Ok
 				//resEl - <updata> to send response to server. Description of created element should be added here
 				//TODO create list of elements in an existing window
-				var parentId = dataNode.getAttribute("canvas");
 				var type = dataNode.nodeName;
 				var err = "";
 				
-				if (parentId)  err = addElementToCanvas(parentId, dataNode, resEl);
-				else {
-					//parent is entire window
-					if (type == "head") {
-							
-								if (dataNode.hasChildNodes()) {
-									pageTitle.innerHTML = dataNode.childNodes[0].nodeValue;
-									document.title = dataNode.childNodes[0].nodeValue;//
-								} else {
-									pageTitle.innerHTML = "";
-									document.title = Titles.TITLE;
-								}
+				if (type == "head") {
 						
-					} else {
-						
-						var newContainer = document.createElement("div");
-						newContainer.setAttribute("class", "element-container");
-						var elID = dataNode.getAttribute("id");
-						if (!elID) err = "No id attribute in a " + type + " node";
-						else {
-							newContainer.setAttribute("id", elID);
-							newContainer.setAttribute("contains", type);
-							switch (type) {								
-								case "text":
-									if (dataNode.hasChildNodes()) {
-										newContainer.innerHTML = "<p class='server-text'>" + dataNode.childNodes[0].nodeValue + "</p>";
-										
-									} else {
-										newContainer.innerHTML = "";
-									}
-									break;
-								case "canvas":
-									addCanvas(dataNode, newContainer);
-									break;
-								case "button":
-									var newBtn = document.createElement("input");
-									newBtn.setAttribute("type", "button");
-									var btnLabel = elID;
-									if (dataNode.hasAttribute("name")) btnLabel = dataNode.getAttribute("name");
-									newBtn.setAttribute("value", btnLabel);
-									newBtn.addEventListener(
-											"click", 
-											function (event) {
-												sendData({data: "<updata status='button-click' object='" + elID + "'/>"});
-											}, 
-											true);
-									newContainer.appendChild(newBtn);
-									break;
-								default:
-									err = "The object of type " +  type + " can't be attached to a window"
+							if (dataNode.hasChildNodes()) {
+								pageTitle.innerHTML = dataNode.childNodes[0].nodeValue;
+								document.title = dataNode.childNodes[0].nodeValue;//
+							} else {
+								pageTitle.innerHTML = "";
+								document.title = Titles.TITLE;
 							}
+					
+				} else {
+					
+					var newContainer = document.createElement("div");
+					newContainer.setAttribute("class", "element-container");
+					var elID = dataNode.getAttribute("id");
+					if (!elID) err = "No id attribute in a " + type + " node";
+					else {
+						newContainer.setAttribute("id", elID);
+						newContainer.setAttribute("contains", type);
+						switch (type) {								
+							case "text":
+								if (dataNode.hasChildNodes()) {
+									newContainer.innerHTML = "<p class='server-text'>" + dataNode.childNodes[0].nodeValue + "</p>";
+									
+								} else {
+									newContainer.innerHTML = "";
+								}
+								break;
+							case "canvas":
+								addCanvas(dataNode, newContainer);
+								break;
+							case "button":
+								var newBtn = document.createElement("input");
+								newBtn.setAttribute("type", "button");
+								var btnLabel = elID;
+								if (dataNode.hasAttribute("name")) btnLabel = dataNode.getAttribute("name");
+								newBtn.setAttribute("value", btnLabel);
+								newBtn.addEventListener(
+										"click", 
+										function (event) {
+											sendData({data: "<updata status='button-click' object='" + elID + "'/>"});
+										}, 
+										true);
+								newContainer.appendChild(newBtn);
+								break;
+							default:
+								err = "The object of type " +  type + " can't be attached to a window"
 						}
+					}
 					if (err == "") mCCDOMElement.appendChild(newContainer);
 					}
-				}
+				
 				resEl.appendChild(dataNode.cloneNode(true));
 				if (!err || err == "null") pageDataXML.appendChild(dataNode.cloneNode(true));
 				return err;
 			}
-			function addElementToCanvas(canvasId, dataNode, resEl) {
-				//TODO
-				var type = dataNode.nodeName;
-				//the object should be attached to a canvas
-				switch (type) {
-				case "head":
-					//break;
-				case "point":
-					//break;
-				case "arc":
-					//break;
-				case "line":
-					return "Sorry, this functionality is not implemented yet";
-					break;
-				default:
-					return "The object of type " +  type + " can't be attached to a canvas"
-				}
-				
-			}
-			function removeCavas (id) {
-				
-			}
-			
-			function addElementsToCanvas(canvasId, dataElement, resEl) {
-				
-			}
-			
+
 		function sendData (event) {
 			//TODO send valid xml only
 			if (connection) {
@@ -535,7 +506,6 @@ var DATA_IN_XML = true;
 									}
 								}
 							} else if (action == "request") {
-								//TODO
 								resEl.setAttribute("status", "info");
 								resEl.setAttribute("object", objID);
 								var er = getElementInfo (parentContainer, resEl);
@@ -587,9 +557,9 @@ var DATA_IN_XML = true;
 										var tp = containers[i].rscc.rsCanvas.hasObject(objID);
 										switch (action) {
 										case "remove": {
-											if (tp == "point" || tp == "arc")
+											if (tp == "point" || tp == "arc" || "line")
 												containers[i].rscc.rsCanvas.removeObject(objID);
-											else sendError("Removing of " + tp + " is not implemented yet");//TODO
+											else sendError("Removing of " + tp + " is not implemented yet");
 											break;
 										}
 										case "request": {

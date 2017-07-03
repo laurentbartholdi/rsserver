@@ -90,6 +90,15 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     };
     this.handleMouseUp = function(event) {
         mouseDown = false;
+        if (drawingOnTheSphere) {
+        	if (that.curDrawedLineData) {
+			that.canvas3d.dispatchEvent( new CustomEvent("linesChanged", 
+					{detail: {action: "created", 
+						object: that.curDrawedLineData.id,
+						data: that.getSnapshotObjectElement("line", that.curDrawedLineData)}}));
+        	}
+        	
+        }
         drawingOnTheSphere = false;
         rotating = false;
         movingAnchor = -1;
@@ -229,7 +238,10 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		}
 		var drw = this.getDrawings();
 		for (var i = 0; i < drw.length; i++) {
-			if (drw[i].id == id) {/*TODO*/return true};
+			if (drw[i].id == id) {
+				removeDrawing(i);
+				return true
+			};
 		}
 		for (var i = 0; i < this.arcStyles.length; i++){
 			if (this.arcStyles[i].id == id) {
@@ -327,7 +339,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	var nextDrawingLineIndex = 0;
 	var lastVertex = new THREE.Vector3();
 	var curDrawingVertexIndex = 0;
-	var maxDrawingBufferSize = 1000;
+	var maxDrawingBufferSize = 1000; 
 	var lineOverTheSphere = 1.001;//1.01;
 	var minCircleSegments = 24;
 	var drawedLines = [];
@@ -404,6 +416,21 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		that.arcsNeedUpdate = true;
 		that.somethingChanged = true;
 	}
+	
+	function removeDrawing(index) {
+		var data = that.drawedLinesData.splice(index, 1)[0];
+		if (data && data.id) {
+			var i = 0;
+			while (i < drawedLines.length) {
+				if (drawedLines[i].dataId == data.id) {
+					var ln = drawedLines.splice(i, 1)[0];
+					that.sphere.remove(ln);
+				} else i++;
+			}
+			that.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "removed", object: data.id}}));
+			that.linesUpdated = true;
+		}
+	}
 	function showArcs( arg ) {
 		var val = (arg == undefined ? that.showArcs:arg);
 		for (var i = 0; i < that.arcsData.length; i++) {
@@ -473,18 +500,14 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	}
 	
 	
-	function vectorStartDraw(pos, continueLogical) {
-		startDrawImpl(pos);
-		if (continueLogical) {
-			that.curDrawedLineData.push(CU.localToComplex(pos, that.currentTransform));
-		} else {
+	function vectorStartDraw(pos) {
 			that.curDrawedLineData = [CU.localToComplex(pos, that.currentTransform)];
 			that.curDrawedLineData.id = that.getNewObjectID("line");
 			that.drawedLinesData.push(that.curDrawedLineData);
-		}
+			startDrawImpl(pos, that.curDrawedLineData.id);
 		
 	}
-	function startDrawImpl(pos) {
+	function startDrawImpl(pos, idArg) {
 		if (nextDrawedLineIndex < drawedLines.length) {
 			lastDrawingLine = drawedLines[nextDrawedLineIndex];
 			lastDrawingLine.geometry.vertices[0]=pos.clone().multiplyScalar(lineOverTheSphere);
@@ -499,6 +522,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			that.sphere.add(lastDrawingLine);
 			
 		}
+		lastDrawingLine.dataId = idArg;
 		nextDrawedLineIndex ++;
 		curDrawingVertexIndex = 1;
 		lastVertex = pos.clone();
@@ -526,8 +550,11 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		drawedLines = [];
 		nextDrawedLineIndex = 0;
 		if (!dontClearData) {
+			for (var i = 0; i < this.drawedLinesData.length; i ++)
+				this.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail: {action: "removed", object:this.drawedLinesData[i].id}}));
 			this.curDrawedLineData = [];
 			this.drawedLinesData = [];
+			
 		}
 		//drawedLinesData = [];
 		
@@ -547,36 +574,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		lastDrawedLine = null;
 	}
 	
-	function transformDrawings_() {
-		var drawedLineIndex = -1;
-		var vertexIndex = -1;
-		for (var i = 0; i < that.drawedLinesData.length; i++) {
-			drawedLineIndex ++;
-			
-			
-			vertexIndex = -1;
-			for (var j = 0; j < that.drawedLinesData[i].length; j++) {
-				vertexIndex++;
-				if (vertexIndex >= maxDrawingBufferSize) {
-					drawedLineIndex ++;
-					vertexIndex = 0;
-				}
-				if (drawedLines[drawedLineIndex]) {
-					drawedLines[drawedLineIndex].geometry.vertices[vertexIndex] = 
-						CU.complexToLocalNormalized(that.drawedLinesData[i][j], that.currentTransform).multiplyScalar(RSCanvas.SPHERE_RADIUS*lineOverTheSphere);
-				}
-			}
-		}
-		for (var l = 0; l < drawedLines.length; l++) {
-			drawedLines[l].geometry.verticesNeedUpdate = true;
-		}
-	};
 	function transformDrawings() {
 		resetDrawing();
 		var p0 = new THREE.Vector3(), pnext = new THREE.Vector3();
 		for (var i = 0; i < that.drawedLinesData.length; i++) {
 			p0 = CU.complexToLocalNormalized(that.drawedLinesData[i][0], that.currentTransform).multiplyScalar(RSCanvas.SPHERE_RADIUS);
-			startDrawImpl(p0);
+			startDrawImpl(p0, that.drawedLinesData.id);
 			for (var j = 1; j < that.drawedLinesData[i].length; j++) {
 				pnext = CU.complexToLocalNormalized(that.drawedLinesData[i][j], that.currentTransform).multiplyScalar(RSCanvas.SPHERE_RADIUS);
 				smartDrawImpl(p0, pnext);
@@ -606,7 +609,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		obj.geometry.verticesNeedUpdate = true;
 		obj.geometry.buffersNeedUpdate = true;
 		obj.visible = true;
-		if (curDrawingVertexIndex >= maxDrawingBufferSize) {startDrawImpl(pos);}
+		if (curDrawingVertexIndex >= maxDrawingBufferSize) {startDrawImpl(pos, obj.dataId);}
 	}
 	
 
@@ -1114,7 +1117,6 @@ RSCanvas.prototype = {
 		
 
 		getSnapshot: function() {
-			//TODO make this not when submit button pressed, but when mouse button is released
 			var snapshotXMLObj = this.getSnapshotElement();
 			var rootObj = createEmptyNode("updata");
 			if (this.serverId) rootObj.setAttribute("object", this.serverId);
@@ -1342,6 +1344,13 @@ RSCanvas.prototype = {
 					console.log("lines parsed", this.drawedLinesData);
 					linesParsed = true;
 					this.linesUpdated = true;
+					var l = linesData.length;
+					while(l > 0){
+						this.addNewElement(this.getSnapshotObjectElement("line", this.drawedLinesData[this.drawedLinesData.length - (l--)]));
+					}
+					this.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
+					
+
 				}
 				
 				var arcsData = data.getElementsByTagName("arc");
@@ -1606,9 +1615,6 @@ RSCanvas.prototype = {
 
 			}
 		},
-		updateStyle: function (configObj) {
-			//TODO
-		},
 		
 		updateSphereMaterial: function (materialData, rebuildShader) {
 			if (materialData instanceof ComplexShaderMap) {
@@ -1642,7 +1648,6 @@ RSCanvas.prototype = {
 	
 		currentTransform: MoebiusTransform.identity,
 		somethingChanged: true,
-		//TODO
 		showGrid: true,
 		showAbsGrid: true,
 		transformUpdated: true,
