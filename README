@@ -32,6 +32,110 @@ Shift-double-click to create a point on the sphere. (In current design a point l
 
 GRID AND LABELS ON THE SPHERE
 
-There are two types of grid on the sphere: constant absolute value lines (red in current design) and constan real and imaginary part lines (green). Both grids has the lines that are always visible (0.1, 0.5, 1, 2, 10 absolute values, these labels are light red, -1, 0 and 1 for real and imaginary parts, green) and lines depending on transformation applyed ("dynamic grid"). All type of grid lines can have labels. Besides that there labels that are always present: 0, 1, i, -1, -i and infinity, they are also green. To show and hide grids and labels use "Grid and labels" control set. 
+There are two types of grid on the sphere: constant absolute value lines (red in current design) and constant real and imaginary part lines (green). Both grids has the lines that are always visible (0.1, 0.5, 1, 2, 10 absolute values, these labels are light red, -1, 0 and 1 for real and imaginary parts, green) and lines depending on transformation applyed ("dynamic grid"). All type of grid lines can have labels. Besides that there labels that are always present: 0, 1, i, -1, -i and infinity, they are also green. To show and hide grids and labels use "Grid and labels" control set.
+One can show or hide grids and labels through user interface (a set of checkboxes "Grid and labels") or sending <config> through the server. For example, <config key="showGrid" value="false"/> hides all constant Re and Im part lines. 
 
 When the Fatou and Julia sets of a rational function are drawn on the sphere's surface, the formula of this function is shown below the canvas and controls. 
+
+CLIENT-SERVER COMMUNICATION
+
+The information transfered between web-client, nodejs server and tcp-client is presented in xml format, described in rsserver/data/rsscp.dtd 
+Web-client sends to tcp-client (through the server) an <updata> element, the tcp-client should send <downdata>. Both <updata> and <downdata> must have a "session" attribute. Every time a new web-client is connected to the server new session is created. Id for a new session (the value of a "session" attribute) is generated automatically unless the "session" variable is present in a query string of the URL. For example the URL http://127.0.0.1:1729/?session=s1 will open the session with ID "s1". The URL http://127.0.0.1:1729/ will open the session with a new ID.
+Every session can have one or more browser window, each window has a unic (inside one session) ID. 
+Every window has one <head> and any quantity of <canvas>, <text> and <button> elements. Each of those elements has a unic (inside the session) ID. A canvas object has one <rotation> and one <transform> elements, can have one <function> element and any quantity of <arc>, <line> and <point> elements. Each <arc>, <line> and <point> has a unic (inside the session) id. 
+
+<downdata> element must have an "action" attribute (the value is "request" by default). Set it to "create" to add new elements to window or canvas, "populate" to add elements to canvas, to set it's rotation or transformation, or change configuration, and change a text on a button, "remove" to remove object from window or canvas, "request" to receive information about the given object. 
+<updata> element has a "status" attribute. It can take an "info" value, when nothing is changed in web view, "updated" when something is changed in a given object, "created" or "removed" when object is created or removed, "button-click" when user clicks a button. 
+
+<downdata> and <updata> must have an "object" attribute. (Except the "action" attribute of <downdata> value is "request". In this case the server sends an information about all windows of a given session. If "session" attribute is not present, the information about all open sessions is sent to tcp-server). The "object" attribute contains an ID of the given object (exsept if <downdata atcion="create"> and <updata status="created">, in this case "object" is the ID of the parent object). 
+
+Examples. 
+
+Start of the session:
+Web->TCP <updata session='s1' status='created'><window id='w0'/></updata>
+
+Creating an object in a window
+TCP->Web <downdata session='s1' obejct='w0' action='create'><button/></downdata>
+Web->TCP <updata session="s1" object="w0" status="created"><button id="button0"/></updata>
+Id of the button is generated automatically.
+
+User clicks the button 'button0'
+Web->TCP <updata session='s1' status='button-click' object='button0'/>
+
+Creating and populating a canvas
+TCP->Web <downdata session='s1' obejct='w0' action='create'><canvas/></downdata>
+Web->TCP <updata session="s1" object="w0" status="created"><canvas id="canvas0"/></updata>
+
+TCP->Web <downdata session="s1" object="canvas0" action="populate">
+		<function type="newton" degree="3"/>
+		<point movable="true"><cn re="1", im="0"/></point>
+		<config key="width" value="1000"/>
+		<transform><cn re="0", im="0"/><cn re="1" im="0"/><cn re="1" im="0"/><cn re="0" im="0"/></transform>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0">
+	<canvas id="canvas0">
+		<rotation x="2" y="0" z="0.7" order="XYZ"/>
+		<transform>
+			<cn re="0" im="0"/>
+			<cn re="1" im="0" r="1"/>
+			<cn re="1" im="0" r="1"/>
+			<cn re="0" im="0"/>
+		</transform>
+		<point id="canvas0UIpoint0" canvas="canvas0" movable="true">
+			<cn re="1.0000000000000002" im="0" r="1.0000000000000002"/>
+		</point>
+		<function degree="3">
+			<numer>
+				<cn re="1" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="2" im="0"/>
+			</numer>
+			<denom>
+				<cn re="0" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="3" im="0"/>
+				<cn re="0" im="0"/>
+			</denom>
+			<cycle length="1">
+				<cn re="1" im="0"/>
+			</cycle>
+			<cycle length="1">
+				<cn re="-0.4999999999999998" im="0.8660254037844387"/>
+			</cycle>
+			<cycle length="1">
+				<cn re="-0.5000000000000004" im="-0.8660254037844385"/>
+			</cycle>
+		</function>
+	</canvas>
+</updata>
+
+User moved a point: 
+Web->TCP 
+<updata session="s1" status="updated" object="canvas0">
+	<point id="canvas0UIpoint0" canvas="canvas0" movable="true">
+		<cn re="1.2589972606891076" im="-0.17267385291220938" r="1.2707833654491327"/>
+	</point>
+</updata>
+
+User has added a point: 
+Web->TCP
+<updata session="s1" status="created" object="canvas0">
+	<point id="canvas0UIpoint1" canvas="canvas0">
+		<cn re="1.3302203016807654" im="-1.3189376605521121" r="1.8732545484867626"/>
+	</point>
+</updata>
+
+User has removed a point:
+Web->TCP
+<updata session="s1" status="removed" object="canvas0UIpoint0"/>
+
+Remove an object
+TCP->Web <downdata session="s1" action="remove" object="canvas0"/>
+Web->TCP <updata session='s1' status='removed' object='canvas0'/>
+
+Request information
+TCP->Web <downdata action="request" session="s1"/>
+Web->TCP <updata status='info' session='s1' object='w0'><window><button name='button0' id='button0'/></window></updata>
+
