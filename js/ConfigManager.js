@@ -196,13 +196,16 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		showLabels: false,
 		showArcs: true,
 		arcColor: 0x333399,
-		arcWidth: 2
+		arcWidth: 2,
+		reportRotation: true,
+		reportTransform: true
 		};
 ConfigManager.canvasFormatFields = {width : "f", height: "f", 
 		bkgColor: "color", 
 		showGrid: "bool", showLabels: "bool", showAbsGrid: "bool", 
 		showDynamicGrid: "bool", showAbsDynamicGrid: "bool",
-		showArcs: "bool"};
+		showArcs: "bool",
+		reportTransform: "bool", reportRotation: "bool"};
 ConfigManager.shaderFields = {
 		actualInfinity: "f", 
 		pixelSize: "f", 

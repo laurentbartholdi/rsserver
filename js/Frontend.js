@@ -90,9 +90,11 @@ var DATA_IN_XML = true;
 			if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
 				pageElement.rscc = rscc;
 				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
-				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasObjectsChanged);
-				rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasObjectsChanged);
-				rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasObjectsChanged);
+				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasUpdated);
+				rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasUpdated);
+				rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasUpdated);
+				rscc.rsCanvas.canvas3d.addEventListener("rotationChanged", onCanvasUpdated);
+				rscc.rsCanvas.canvas3d.addEventListener("transformChanged", onCanvasUpdated);
 			}
 			else return "Error creating canvas";
 			
@@ -113,29 +115,40 @@ var DATA_IN_XML = true;
 			return dataObject;
 			
 		}
-		function onCanvasObjectsChanged(event) {
+		function onCanvasUpdated(event) {
 			
 			var updata = createEmptyNode("updata");
 			console.log("selected points event catched", event, event.target);
 			if (event.detail) {
-				updata.setAttribute("status", event.detail.action);
+				updata.setAttribute("status", event.detail.action || "updated");
 				updata.setAttribute("object", event.detail.object);
 				if (Array.isArray(event.detail.data))
 					for (var i = 0; i < event.detail.data.length; i ++)
 						updata.appendChild(event.detail.data[i]);
 				else if (event.detail.data) updata.appendChild(event.detail.data);
-				var evt=new CustomEvent("SnapshotSaved", {data: "",  __exposedProps__ : { data : "r"}});
-				evt.data = xmlSerializer.serializeToString(updata);
-				console.log("end of selectedpoints event handler", evt.data);
-				if (evt.data)
-
-				event.target.dispatchEvent(evt);
-				
-
+				createSendEvent(event.target, updata);
 			} else {
 				console.error("No detail for selectedPointsChanged or arcsChanged event");
 			}
-			
+		}
+		function onCanvasUpdated_(event) {
+			var updata = createEmptyNode("updata");
+			console.log("canvas updated event catched", event, event.target);
+			if (event.detail) {
+				updata.setAttribute("status", "updated");
+				updata.setAttribute("object", event.detail.object);
+				updata.appendChild(event.detail.data);
+				createSendEvent(event.target, updata);
+			} else {
+				console.error("No detail for rotationChanged or transformChanged event");
+			}
+		}
+		
+		function createSendEvent(target, updata) {
+			var evt=new CustomEvent("SnapshotSaved", {data: "",  __exposedProps__ : { data : "r"}});
+			evt.data = xmlSerializer.serializeToString(updata);
+			if (evt.data)
+				target.dispatchEvent(evt);
 			
 		}
 		

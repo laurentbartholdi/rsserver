@@ -30,6 +30,7 @@ var Grid = function(rsCanvasArg) {
 
 	};
 	this.updateGrid = function(leaveHidden) {
+
 		if (!leaveHidden) this.hidden = false;
 		if (rsCanvas.showLabels) {
 			for (var j = 0; j < Grid.permanentLabelsData.length; j ++){
@@ -506,7 +507,6 @@ GridLine.prototype = {
 			}
 			this.radius = Math.sqrt(1 - cs*cs);
 			this.circleCenter.copy(this.center).setLength(cs);
-			if (this.log) console.log(this.points);
 		},
 		setObject: function() {
 			this.geometry = new THREE.CircleBufferGeometry(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor, 60);

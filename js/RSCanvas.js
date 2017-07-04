@@ -100,17 +100,26 @@ var RSCanvas = function(canvas, materialData, canvasData) {
         	
         }
         drawingOnTheSphere = false;
+        
+        if (rotating && rotationChanged && that.configManager.getConfigValue("reportRotation") && movingAnchor < 0) {
+        	that.canvas3d.dispatchEvent(new CustomEvent("rotationChanged", {detail: {data: that.getRotationElement(), object: that.serverId}}));
+        }
         rotating = false;
+        rotationChanged = false;//prevents dispatching an event when the sphere was not actually rotated
+       if(movingAnchor >= 0 && that.configManager.getConfigValue("reportTransform")) {
+            	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: that.getTransformElement(), object: that.serverId}}));       		
+        	}
         movingAnchor = -1;
-        //console.log("handle MouseUp", movingSelectedPoint, selectedPointsData);
-        if (movingSelectedPoint && movingSelectedPoint.numInArray === undefined){
-        	for (var i = 0; i < selectedPointsData.length; i++)
-        		if (selectedPointsData[i].anchor == movingSelectedPoint) {
-        				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", 
-        						{detail: {action: "updated", 
-        							object: that.serverId,
-        							data: that.getSnapshotObjectElement("point", selectedPointsData[i])}}));
-        		}
+        if (movingSelectedPoint) { 
+        	if( movingSelectedPoint.numInArray === undefined){
+	        	for (var i = 0; i < selectedPointsData.length; i++)
+	        		if (selectedPointsData[i].anchor == movingSelectedPoint) {
+	        				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", 
+	        						{detail: {action: "updated", 
+	        							object: that.serverId,
+	        							data: that.getSnapshotObjectElement("point", selectedPointsData[i])}}));
+	        		}
+        	} 
         }
         movingSelectedPoint = null;   
         that.canvas3d.style.cursor = "default";
@@ -141,8 +150,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			if (rotating) performRotation();
 			if (drawingOnTheSphere) vectorDrawTo(curMouseLocalPos);
 			if (movingAnchor >= 0) {
-				showArcs(false);
-				this.grid.hideGrid();
+				//It seems, after optimizing of three.js there is no need 
+				//to hide dynamic grid and arcs when transforming the sphere, it works fast
+				//showArcs(false);
+				this.drawArcs();
+
+				//this.grid.hideGrid();
 				this.updateTransform();
 				
 			}
@@ -619,12 +632,14 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	//------------rotation---------------------------------------------
 	var rotAxis = new THREE.Vector3();
 	var rotAngle;
+	var rotationChanged = false;
 	function performRotation() {
 		rotAxis.crossVectors(startRotWorldMousePos, curWorldMousePos);
 		rotAxis.normalize();
 		rotAngle = curWorldMousePos.angleTo(startRotWorldMousePos);
 		rotQuaternion.setFromAxisAngle(rotAxis, rotAngle);
 		that.sphere.quaternion.multiplyQuaternions(rotQuaternion, startRotQuaternion);
+		rotationChanged = true;//resets in handleMouseUp;
 		
 	}
 	//--------------end rotation----------------------------------------
@@ -652,7 +667,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	};
 	this.resetTransform = function() {
 		this.currentTransform = MoebiusTransform.identity;
-		//updateTextUI();
+	    if(this.configManager.getConfigValue("reportTransform")) {
+           	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: this.getTransformElement(), object: this.serverId}}));       		
+       	}
 		this.transformUpdated = true;
 	};
 	function addAnchor (canvasPos) {
@@ -1127,19 +1144,9 @@ RSCanvas.prototype = {
 		},
 		getSnapshotElement: function() {
 			var snapshotXMLObj = createEmptyNode("canvas");
-			var rotEl = createEmptyNode("rotation");
-			rotEl.setAttribute("x", this.sphere.rotation.x);
-			rotEl.setAttribute("y", this.sphere.rotation.y);
-			rotEl.setAttribute("z", this.sphere.rotation.z);
-			rotEl.setAttribute("order", this.sphere.rotation.order);
-			snapshotXMLObj.appendChild(rotEl);
+			snapshotXMLObj.appendChild(this.getRotationElement());
 			
-			var transformEl = createEmptyNode("transform");
-			transformEl.appendChild(this.currentTransform.a.toXMLObj());
-			transformEl.appendChild(this.currentTransform.b.toXMLObj());
-			transformEl.appendChild(this.currentTransform.c.toXMLObj());
-			transformEl.appendChild(this.currentTransform.d.toXMLObj());
-			snapshotXMLObj.appendChild(transformEl);
+			snapshotXMLObj.appendChild(this.getTransformElement());
 
 			var ptsData = this.getSelectedPointsData();
 			for (var i = 0; i < ptsData.length; i++) {
@@ -1160,7 +1167,24 @@ RSCanvas.prototype = {
 			return snapshotXMLObj;
 			
 		},
-		
+		getRotationElement: function() {
+			var rotEl = createEmptyNode("rotation");
+			rotEl.setAttribute("x", this.sphere.rotation.x);
+			rotEl.setAttribute("y", this.sphere.rotation.y);
+			rotEl.setAttribute("z", this.sphere.rotation.z);
+			rotEl.setAttribute("order", this.sphere.rotation.order);
+			return rotEl;
+			
+		},
+		getTransformElement: function() {
+			var transformEl = createEmptyNode("transform");
+			transformEl.appendChild(this.currentTransform.a.toXMLObj());
+			transformEl.appendChild(this.currentTransform.b.toXMLObj());
+			transformEl.appendChild(this.currentTransform.c.toXMLObj());
+			transformEl.appendChild(this.currentTransform.d.toXMLObj());
+			return transformEl;
+			
+		},
 		getSnapshotObjectElement: function (type, data) {
 			var el = createEmptyNode(type);
 			if (!data) console.error("Invalid snapshot argument", type, data);
