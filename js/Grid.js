@@ -10,13 +10,11 @@ var Grid = function(rsCanvasArg) {
 	this.hidden = false;
 	this.createGrid = function() {
 		for (var i = -gridLinesNum; i <= gridLinesNum; i++ ) {
-			//console.log("creating grid", i, rsCanvas);
 			grid.push(new GridLine(i, "re", rsCanvas));//, 0x0000ff));
 			grid.push(new GridLine(i, "im", rsCanvas));//, 0xff0000));
 			
 		}
 		for (var j = 0; j < Grid.permanentLabelsData.length; j++){
-			console.log("creating grid", j, Grid.permanentLabelsData[j].text, Grid.permanentLabelsData[j].value);
 			permanentLabels.push(new RSTextLabel(Grid.permanentLabelsData[j].value, rsCanvas, {message: Grid.permanentLabelsData[j].text} ));
 		}
 		for (var jj = 0; jj < Grid.staticAbsValues.length; jj++) {
@@ -28,15 +26,10 @@ var Grid = function(rsCanvasArg) {
 		for (var k = 0; k < staticAbsValues.length; k++) {
 			absGrid.push(new GridLine(staticAbsValues[k], "rho", rsCanvas, GridLine.absColor));
 		}
-		//dilCenterMarker = new GridPointMarker(Complex["0"]);
 		createDynamicGrid();
-		//var d = getSmallGridLineDistance();
-		//dilCenterPlusMarker = new GridPointMarker(new Complex(d, d));
-		//dilCenterMinusMarker = new GridPointMarker(new Complex(-d, -d));
 
 	};
 	this.updateGrid = function(leaveHidden) {
-		console.log(this.hidden);
 		if (!leaveHidden) this.hidden = false;
 		if (rsCanvas.showLabels) {
 			for (var j = 0; j < Grid.permanentLabelsData.length; j ++){
@@ -56,7 +49,6 @@ var Grid = function(rsCanvasArg) {
 			for (var j = 0; j < permanentLabels.length; j ++)
 			permanentLabels[j].hide();
 		}
-		console.log("update grid", rsCanvas.showGrid, rsCanvas.showAbsGrid, leaveHidden, this.hidden);
 		if (rsCanvas.showGrid){
 			for (var i = 0; i < grid.length; i++) {
 				grid[i].setVisible(true);
@@ -109,7 +101,6 @@ var Grid = function(rsCanvasArg) {
 	this.checkLabelCollisions = function (obj) {
 		if (!rsCanvas.showLabels) return;
 		if (!(obj instanceof RSTextLabel)) return;
-		console.log("checkLabelCollisions", obj);
 		for (var j = 0; j < permanentLabels.length; j++) {
 			permanentLabels[j].checkCollision(obj);
 		}
@@ -126,7 +117,6 @@ var Grid = function(rsCanvasArg) {
 			lineLabels[j].hide();
 
 		this.hidden = true;
-		console.log("hide grid", this.hidden);
 		
 	};
 	var dynamicGrid = [];
@@ -159,12 +149,10 @@ var Grid = function(rsCanvasArg) {
 			albl.hide();
 			lineLabels.push(albl);
 		}
-		console.log("dynamic grid created", lineLabels);
 	};
 	var dynamicGridVars = {};
 	var absDynamicGridVars = {};
 	function updateDynamicGrid() {
-		//console.log("update dynamic grid", lineLabels);
 		if (rsCanvas.showGrid || rsCanvas.showLabels) {
 			dynamicGridVars = getDynamicGridVars();			
 		}
@@ -172,7 +160,6 @@ var Grid = function(rsCanvasArg) {
 			absDynamicGridVars = getAbsDynamicGridVars();
 		}
 		if (rsCanvas.showGrid && rsCanvas.showDynamicGrid) {
-			//console.log("update grid",dynamicGridVars);
 			for (var i = -dynamicGridSmallLinesNum; i <= dynamicGridSmallLinesNum; i++){
 				updateDynamicGridLine(2*(dynamicGridSmallLinesNum + i), dynamicGridVars.reMid + i*dynamicGridVars.smallDiv);
 				updateDynamicGridLine(2*(dynamicGridSmallLinesNum + i) + 1, dynamicGridVars.imMid + i*dynamicGridVars.smallDiv);
@@ -206,7 +193,6 @@ var Grid = function(rsCanvasArg) {
 					updateLineLabel(j+4, dynamicGridVars.reMid, dynamicGridVars.imMid - dist);
 					j+=4;
 				}
-				//console.log("update line labels", j, lineLabels.length);
 				while (j < 3*dynamicGridSmallLinesNum-1) {
 					lineLabels[++j].hide();
 				}
@@ -222,7 +208,6 @@ var Grid = function(rsCanvasArg) {
 					updateLineLabel(k +3*dynamicGridSmallLinesNum, absDynamicGridVars.values[k++], absDynamicGridVars.phi0, true);
 				}
 				while (++k < lineLabels.length - 3*dynamicGridSmallLinesNum ) {
-	//				console.log(lineLabels.length, k, 3*dynamicGridSmallLinesNum);
 					lineLabels[k +3*dynamicGridSmallLinesNum].hide();
 				}
 			}else {
@@ -245,12 +230,9 @@ var Grid = function(rsCanvasArg) {
 		for (var j = 0; j < permanentLabels.length; j++) {
 			lineLabels[index].checkCollision(permanentLabels[j]);
 		}
-
-		//lineLabels[index].updatePosition();
 	}
 	
 	function updateDynamicGridLine(index, value) {
-		//console.log(index, value);
 		var l = dynamicGrid[index];
 		l.setVisible(true);
 		l.setPar(value);
@@ -258,15 +240,11 @@ var Grid = function(rsCanvasArg) {
 		if (index < reImLinesNum) {
 			var cv = roundTo(value, dynamicGridVars.bigDiv);
 			if (Math.abs(value - cv) < dynamicGridVars.smallDiv*0.001) {
-				//console.log("equals");
 				l.setColor (GridLine.bigDivColor);
 			} else {
 				l.setColor(GridLine.smallDivColor);
 			}
-		} else {
-			//console.log("updateDynamicGridLine", index, value, l.type);
-			
-		}
+		} 
 	}
 	function getDynamicGridVars() {
 		//var transformPars = getTransformParams(rsCanvas.currentTransform);
@@ -304,16 +282,9 @@ var Grid = function(rsCanvasArg) {
 		var step0 = roundTo10(drho0).smallDiv;
 		var start = roundTo(rho0, step0);
 		res.values.push(res.rhoMin,start-step0,start, start+step0, res.rhoMax);
-		//res.values.push(tart-step0,start,start+step0);
-		/*res.values.push(start);
-		for (var i = 1; i <= dynamicAbsGridSmallLinesNum; i++){
-			if (start > i*step0) res.values.push(start - i*step0);
-			res.values.push(start + i*step0);
-		}*/
 		res.phi0 = t.a.mult(Complex.conj(t.c)).add(t.b.mult(Complex.conj(t.d))).t();
 		addDynamicAbsValues(start, step0, res, 1);
 		addDynamicAbsValues(start, step0, res, -1);
-		console.log("dynamicAbsGridValues", res.alpha, res.beta, rho0, drho0, res.values);
 		return res;
 	}
 	
@@ -412,17 +383,9 @@ GridPointMarker.prototype = {
 		}
 };
 
-/*function createGrid () {
-	for (var i = 1; i <= gridLinesNum; i++ ) {
-		grid.push(new GridLine(2*Math.PI*i/gridLinesNum, "phase"));//, 0x0000ff));
-		grid.push(new GridLine(i, "rho"));//, 0xff0000));
-	}
-}*/
 
 var GridLine = function(par, type, rsCanvas, color ) {
 	
-	//this.par = par;
-	//console.log("new GridLine",type, par, rsCanvas);
 	this.rsCanvas = rsCanvas;
 	this.type = type || "Re";
 	this.color = color || GridLine.color;
@@ -442,12 +405,10 @@ GridLine.absBigDivColor = 0x993333;
 //GridLine.absBigDivColor = 0x000099;
 
 GridLine.getCenterRadius = function (argVectors, resObj) {
-	console.log("getCenterRadius", argVectors)
 	var vectors = new Array();
 	for (var i = 0; i < argVectors.length; i++) {
 		vectors.push(argVectors[i].clone().normalize());
 	}
-	console.log("getCenterRadius: vectors", vectors);
 	var res = resObj || {};
 	res.center = new THREE.Vector3(); 
 	res.circleCenter = new THREE.Vector3();
@@ -464,23 +425,17 @@ GridLine.getCenterRadius = function (argVectors, resObj) {
 	
 	res.radius = Math.sqrt(1 - cs*cs);
 	res.circleCenter.copy(res.center).setLength(cs);
-	console.log("getCenterRadius: r, c", res.radius, res.circleCenter);
 	var rotAxis = new THREE.Vector3(-res.center.y, res.center.x, 0);
 	var rotAngle = Math.acos(res.center.z);
 	res.q = (new THREE.Quaternion()).setFromAxisAngle(rotAxis.normalize(), rotAngle);
-	console.log("getCenterRadius: q", res.q);
 	
 	res.newX = (new THREE.Vector3(1, 0, 0)).applyQuaternion(res.q);
 	res.newY = (new THREE.Vector3(0, 1, 0)).applyQuaternion(res.q);
-	console.log("getCenterRadius: x, y", res.newX, res.newY);
 	res.angles = [];
 	for (var i = 0; i < vectors.length; i++) {
 		res.angles.push(Math.atan2(vectors[i].dot(res.newY), vectors[i].dot(res.newX)));
 		if (res.angles[i] < 0) res.angles[i] += 2*Math.PI;
-		console.log(i, res.angles[i]);
 	}
-	console.log("getCenterRadius: angles", res.angles);
-
 	var phi1 = res.angles[0],
 	 phi2 = res.angles[res.angles.length-1],
 	 phi0 = res.angles[1];
@@ -489,8 +444,6 @@ GridLine.getCenterRadius = function (argVectors, resObj) {
 				phi1 : phi2;
 		res.phi = ((phi1 < phi0 && phi0 < phi2) || (phi2 < phi0 && phi0 < phi1)) ?
 				Math.abs(phi1-phi2) : (2*Math.PI - Math.abs(phi1-phi2));
-	
-	console.log(res);
 	
 	return res;
 }
@@ -526,7 +479,6 @@ GridLine.prototype = {
 				this.points.push(new Complex(0, this.par));
 				this.points.push(new Complex(-this.par, 0));
 			}
-			//console.log("grid line", this.type, this.par, this.points);
 			if (firstCall) {
 				this.setCenterRadius();
 				this.setObject();
@@ -557,11 +509,8 @@ GridLine.prototype = {
 			if (this.log) console.log(this.points);
 		},
 		setObject: function() {
-			//this.geometry = new THREE.CircleGeometry(this.radius*(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor), 60);
 			this.geometry = new THREE.CircleBufferGeometry(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor, 60);
-			
-			this.material = new THREE.LineBasicMaterial({color: this.color});//, wireframe: true});
-			//this.material = new THREE.MeshLambertMaterial({color: this.color, wireframe: true});
+			this.material = new THREE.LineBasicMaterial({color: this.color});
 			this.object = new THREE.Line(this.geometry, this.material);
 			this.object.scale = new THREE.Vector3(this.radius, this.radius, this.radius);
 			this.rsCanvas.sphere.add(this.object);
@@ -577,9 +526,6 @@ GridLine.prototype = {
 			
 		},
 		updateObject: function (){
-			/*for (var i = 0; i < this.object.geometry.vertices.length; i++) {
-				this.object.geometry.vertices[i].setLength(this.radius*(RSCanvas.SPHERE_RADIUS*GridLine.radiusFactor));
-			}*/
 			this.object.scale.set(this.radius, this.radius, this.radius);
 			
 			this.setObjectPosition();
