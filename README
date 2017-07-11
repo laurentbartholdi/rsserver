@@ -36,6 +36,9 @@ There are two types of grid on the sphere: constant absolute value lines (red in
 One can show or hide grids and labels through user interface (a set of checkboxes "Grid and labels") or sending <config> through the server. For example, <config key="showGrid" value="false"/> hides all constant Re and Im part lines. 
 
 When the Fatou and Julia sets of a rational function are drawn on the sphere's surface, the formula of this function is shown below the canvas and controls. 
+Meanings of the colors are described in a legend. The numbers to show are read from the <cycle> entries of the <function>. Use 	"legendMarkerSize", "legendPosition" and "legendTextColor"
+config values to change legend's appearance and "showLegend" to switch it on and off. "legendMarkerSize" is size of a colored square in pixels, "legendPosition" controls in which corner of the canvas legend is shown ("lt" for left-top, "rt", "lb" or "rb" for others).
+ 
 
 CLIENT-SERVER COMMUNICATION
 

@@ -221,6 +221,8 @@ RST.applyTransform := function(t, c)
 	return RST.complexDiv(num, denom);
 
 end;
+
+
  
 
 
@@ -240,7 +242,7 @@ basilica := rec(name:="function", attributes:=rec(degree:="2"), content:= [
 				rec(name:="numer", attributes:=rec(degree:="2"), content:= [RST.cn(-1, 0), cn0, RST.cn(1, 0)]),
 				rec(name:="denom", attributes:=rec(degree:="0"), content:=[RST.cn(1, 0)]),
 				rec(name:="cycle", attributes:=rec(length:="1"), content:=[cnInfinity]),
-				rec(name:="cycle", attributes:=rec(length:="2"), content:=[cn0, RST.cn(-1, 1)])
+				rec(name:="cycle", attributes:=rec(length:="2"), content:=[cn0, RST.cn(-1, 0)])
 ]);
 
 #<function degree='4'>
@@ -252,7 +254,9 @@ basilica := rec(name:="function", attributes:=rec(degree:="2"), content:= [
 func4:= rec(name:="function", attributes:=rec(degree:="4"), content:= [
 				rec(name:="numer", attributes:=rec(degree:="4"), content:= [cn0, cn0, cn0, RST.cn(-2, 0), RST.cn(1, 0)]),
 				rec(name:="denom", attributes:=rec(degree:="4"), content:=[RST.cn(1,0), RST.cn(-2, 0), cn0, cn0, cn0]),
-				rec(name:="cycle", attributes:=rec(length:="1"), content:=[RST.cn(-1, 0)])
+				rec(name:="cycle", attributes:=rec(length:="1"), content:=[RST.cn(0, 0)]),
+				rec(name:="cycle", attributes:=rec(length:="1"), content:=[RST.cn(1, 0)]),
+				rec(name:="cycle", attributes:=rec(length:="1"), content:=[cnInfinity])
 ]);
 
 
