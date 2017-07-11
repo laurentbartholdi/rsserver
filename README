@@ -142,3 +142,29 @@ Request information
 TCP->Web <downdata action="request" session="s1"/>
 Web->TCP <updata status='info' session='s1' object='w0'><window><button name='button0' id='button0'/></window></updata>
 
+Adding some objects through the server
+TCP->Web
+"<downdata action="populate" session="s1" object="canvas0">
+	<point color="#ff6666" movable="false"><cn re="0" im="1"/></point>
+	<point color="#6666ff" movable="false"><cn re="1" im="0"/></point>
+	<point color="#66ff66" movable="false"><cn re="1" im="1"/></point>
+	<arc type="transformation" color="#6666ff"><cn re="0" im="0"/><cn re="1" im="0"/><cn re="1" im="1"/><cn re="0" im="-1"/></arc>
+</downdata>"
+Web->TCP
+<updata status="created" object="canvas0">
+	<point id="canvas0UIpoint1" canvas="canvas0" color="#ff6666" movable="false"><cn re="0" im="1" r="1" t="1.5707963267948966"/></point>
+	<point id="canvas0UIpoint2" canvas="canvas0" color="#6666ff" movable="false"><cn re="1" im="0" r="1"/></point>
+	<point id="canvas0UIpoint3" canvas="canvas0" color="#66ff66" movable="false"><cn re="1" im="1" r="1.4142135623730951" t="0.7853981633974482"/></point>
+</updata>
+<updata status="created" object="canvas0">
+	<arc id="canvas0UIarc4" canvas="canvas0" color="#6666ff" width="2">
+		<sp x="0" y="0" z="-1"/>
+		<sp x="0.6666666666666669" y="-0.3333333333333335" z="-0.6666666666666666"/>
+		<sp x="1" y="0" z="0"/>
+	</arc>
+</updata>
+<updata status="updated" object="canvas0">
+	<canvas id="canvas0">[canvas content]</canvas>
+</updata>
+
+
