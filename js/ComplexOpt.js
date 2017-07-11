@@ -762,6 +762,12 @@
 	Complex["2I"]= Complex(0,2,2,Math.PI/2);
 	Complex["Infinity"] = new Complex(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
 	Complex["Infinity"].toSimpleString = function() {return "Infinity any";};
+	Complex["Infinity"].toString = function() {return "∞"};
+	Complex["Infinity"].toXMLObj = function() {
+		var el = createEmptyNode("cn");
+		el.setAttribute("name", "Infinity");
+		return el;
+	}
 
 	// Expose the Complex class
 	global.Complex = Complex;

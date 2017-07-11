@@ -198,14 +198,19 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		arcColor: 0x333399,
 		arcWidth: 2,
 		reportRotation: true,
-		reportTransform: true
+		reportTransform: true,
+		showLegend: true,
+		legendMarkerSize: 20,
+		legendPosition: "lt", //left-top
+		legendTextColor: 0x999999
 		};
 ConfigManager.canvasFormatFields = {width : "f", height: "f", 
 		bkgColor: "color", 
 		showGrid: "bool", showLabels: "bool", showAbsGrid: "bool", 
 		showDynamicGrid: "bool", showAbsDynamicGrid: "bool",
 		showArcs: "bool",
-		reportTransform: "bool", reportRotation: "bool"};
+		reportTransform: "bool", reportRotation: "bool",
+		showLegend: "bool", legendMarkerSize: "f", legendPosition: "string", legendTextColor: "color"};
 ConfigManager.shaderFields = {
 		actualInfinity: "f", 
 		pixelSize: "f", 

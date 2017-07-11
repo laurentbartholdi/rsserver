@@ -10,6 +10,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
 		this.camera.updateProjectionMatrix();
 		this.renderer.setSize( this.canvas3d.width, this.canvas3d.height );
+		this.updateLegendPosition();
 		this.renderer.render();
 
 	};
@@ -331,7 +332,43 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		this.grid.updateGrid();
 	};
 	//---------------end grid------------------------------------------
+	//--------Legend------------------
+	this.createLegend = function () {
+		this.legend = new Legend();
+		this.updateLegendPosition();
+		this.scene.add(this.legend);
+	}
 	
+	this.updateLegendPosition = function () {
+		if (this.configManager.getConfigValue("showLegend")){
+
+			var delta = 6; 
+			var screenMarkerSize = this.configManager.getConfigValue("legendMarkerSize");
+			var z = this.camera.position.z;
+			var tgphi = Math.tan(this.camera.fov/2*Math.PI/180);
+			var lw = this.legend.getWidth();
+			var lh = this.legend.getHeight();
+			var la = lw/lh;
+			var r = this.canvas3d.height/2/tgphi*RSCanvas.SPHERE_RADIUS/Math.sqrt(z*z - RSCanvas.SPHERE_RADIUS*RSCanvas.SPHERE_RADIUS);//screen radius of the sphere
+			var W_ = this.canvas3d.width/2 - delta;
+			var H_ = this.canvas3d.height/2 - delta;
+			var maxH;
+			if ((r + la*H_) < W_) {maxH = Math.min(2*H_, (W_-r)/la);}
+			else if ((r + W_/la) < H_) {maxH = Math.min(H_- r, 2*W_/la);}
+			else {
+				var la2 = 1+la*la;
+				maxH = (H_+la*W_ - Math.sqrt(la2*r*r-Math.pow(W_-la*H_, 2)))/la2;
+			}
+			var zh = Math.max(lh/maxH, this.legend.style.markerSize/screenMarkerSize)*0.5*this.canvas3d.height/tgphi;
+			var align = this.configManager.getConfigValue("legendPosition");
+			this.legend.position.z = -zh+z;
+			this.legend.position.y = align.charAt(1) == "t" ? -(2*delta/this.canvas3d.height - 1)*zh*tgphi : (2*delta/this.canvas3d.height - 1)*zh*tgphi+lh;
+			this.legend.position.x = align.charAt(0) == "l" ? -(this.camera.aspect - 2*delta/this.canvas3d.height)*zh*tgphi : (this.camera.aspect - 2*delta/this.canvas3d.height)*zh*tgphi;
+			this.legend.updateStyle({align: align.charAt(0) == "l" ? "left" : "right", textColor: this.configManager.getConfigValue("legendTextColor")});
+			this.legend.visible = true;
+		} else this.legend.visible = false;
+	}
+	//---------------end legend
 	//---------transform anchors---------------------------------------
 	this.createTransformAnchors = function() {
 	    for (var i = 0; i < 3; i++) {
@@ -1088,13 +1125,10 @@ RSCanvas.prototype = {
 			
 			    
 			this.scene.add( this.sphere );
-			this.sphere.rotation.x = 2;//2.8;
-			this.sphere.rotation.y = 0;//-1;
-			this.sphere.rotation.z = 0.7;//2;
+			this.sphere.rotation.x = 2.21;
+			this.sphere.rotation.y = 0;
+			this.sphere.rotation.z = 0.68;
 			
-			// <rotation x="-1.6762869448210695" y="0.6377511515907812" z="-0.41649239746795746" order="XYZ"/>
-			//<rotation x="2.756627544252358" y="-1.0473795813912428" z="1.9898073352816288" order="XYZ"/>
-
 			this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
 
 		    this.converter = new RSCanvas.PointConverter(this);
@@ -1106,6 +1140,7 @@ RSCanvas.prototype = {
 		    this.grid = new Grid(this);
 		    this.createGrid();
 		    this.createTransformAnchors();
+		    this.createLegend();
 		    
 		    this.inited = true;
 		    
@@ -1490,16 +1525,22 @@ RSCanvas.prototype = {
 						ConfigManager.parseXMLNode(configData[i], newConfig);
 					}
 					var canvasFormatChanged = false;
+					var legendChanged = false;
 					for (var f in newConfig)
-						if (newConfig.hasOwnProperty(f))
+						if (newConfig.hasOwnProperty(f)) {
 							if (ConfigManager.checkFieldType(f) == "canvasFormat")
 								canvasFormatChanged = true;
+							if (f.substr(0, 6) == "legend" || f == "showLegend")
+								legendChanged = true;
+						}
 					if (canvasFormatChanged) {
 						this.configManager.updateMultiple(newConfig);
+						if (legendChanged) this.updateLegendPosition();
 						this.render();
 					}
 					configParsed = true;
 				}
+				
 				//if (linesParsed) transformDrawings();
 				this.newDataLoaded = true;
 				this.somethingChanged = true;
@@ -1642,7 +1683,30 @@ RSCanvas.prototype = {
 		
 		updateSphereMaterial: function (materialData, rebuildShader) {
 			if (materialData instanceof ComplexShaderMap) {
-				if (materialData.initData && materialData.initData.xml ) this.funcXML = materialData.initData.xml;
+				if (materialData.initData && materialData.initData.xml ) {
+					this.funcXML = materialData.initData.xml;
+					var functionData = this.funcXML;
+					if (functionData) {
+						var cycles = functionData.getElementsByTagName("cycle");
+						var legendData = [];
+						if (cycles && cycles.length > 0) {
+							for (var i = 0; i < cycles.length; i ++){
+								var numbers = cycles[i].getElementsByTagName("cn");
+								for (var j = 0; j < numbers.length; j++)
+									legendData.push(Complex.fromXML(numbers[j]));
+							}
+								
+						}
+						console.log(functionData, cycles);
+						var jColor = new THREE.Color();
+						jColor.set(this.configManager.getConfigValue("juliaColor"));
+						jColor.message = "Julia set"
+						legendData.push(jColor);
+						this.legend.update(legendData);
+						this.updateLegendPosition();
+					}
+
+				}
 				if (!(this.sphere.material instanceof THREE.ShaderMaterial) )
 					this.sphere.material = this.initShaderMaterial(this.sphere.geometry, materialData);
 				if (rebuildShader) {
@@ -1700,6 +1764,8 @@ RSCanvas.prototype = {
 		//----------------------------------------------------------
 		
 };
+
+//TODO config
 RSCanvas.drawingColor = 0xff0000;
 RSCanvas.PointConverter = function (rsc) {
 	this.canvasObj = rsc;

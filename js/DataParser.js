@@ -230,8 +230,8 @@ function parseCycles(line, res) {
 	res.cycleperiod = [];
 	for (var i = 0; i < res.cyclelen; i++) {
 	    if (line[1+4*i ] == "Infinity")
-//	    	res.cycle.push(Complex["Infinity"]);
-    	res.cycle.push(new THREE.Vector2(1.01e10, 1.01e10));
+	    	res.cycle.push(Complex["Infinity"]);
+    	//res.cycle.push(new THREE.Vector2(1.01e10, 1.01e10));
 	    else
 	    	res.cycle.push(new THREE.Vector2(
 	    			parseFloat(line[1+4*i]),
@@ -251,7 +251,8 @@ function vectorsToXML (arr, tag, offset, length) {
 	var o = offset ? offset : 0;
 	var l = length ? length + o: arr.length;
 	for (var i = o; i < l && i < arr.length; i ++) {
-		res.appendChild(vectorToCN(arr[i]));
+		if (arr[i] instanceof Complex) res.appendChild(arr[i].toXMLObj())
+		else res.appendChild(vectorToCN(arr[i]));
 	}
 	return res;
 }

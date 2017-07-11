@@ -81,7 +81,6 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		var showArcsChanged = false;
 		for (var f in configObj){
 			if (configObj.hasOwnProperty(f)){
-				//console.log(f, f.slice(0, 4).toLowerCase(), f.slice(-4).toLowerCase());
 				if (f.slice(0, 4).toLowerCase()=="show") { 
 					if (f.slice(-4).toLowerCase() == "grid" 
 						|| f.slice(-6).toLowerCase() == "labels"){
@@ -90,7 +89,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 					else if (f.slice(-4).toLowerCase()== "arcs") {
 						showArcsChanged = true;
 					}
-					eval(f).checked = configObj[f];
+					if (showControls[f]) showControls[f].checked = configObj[f];
 				}
 				
 			}
@@ -116,8 +115,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 
 	var canvasCell = document.createElement("td");
 	tbl.appendChild(document.createElement("tr").appendChild(canvasCell));
-	/*TODO get rid off this crasy "+12" thing*/ 
-	var cellWidth = this.canvasWidth;// + 12;
+	var cellWidth = this.canvasWidth;
 	canvasCell.setAttribute("width", cellWidth.toString()+"px");
 	canvasCell.setAttribute("colspan", "4");
 	tbl.setAttribute("width", cellWidth);
@@ -141,18 +139,23 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	var td1 = document.createElement("div");
 	td01.appendChild(td1);
 	td1.setAttribute("id", "show_grid_controls");
+	var showControls = {};//object to store references for controls to access by names
+	
 	var showGrid = addInput(td1, "checkbox", InterfaceNames.SHOW_RE_IM_GRID, "change", this.changeShowGrid);
+	showControls.showGrid = showGrid;
 	if (this.configManager.getConfigValue("showGrid"))
 		showGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	td1.appendChild(document.createTextNode("\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"));
 	var showDynamicGrid = addInput(td1, "checkbox", InterfaceNames.SHOW_DYN_GRID, "change", this.changeShowGrid);
+	showControls.showDynamicGrid = showDynamicGrid;
 	if (!showGrid.checked) 
 		showDynamicGrid.setAttribute("disabled", "disabled");
 	if (this.configManager.getConfigValue("showDynamicGrid"))
 		showDynamicGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	var showAbsGrid = addInput(td1, "checkbox", InterfaceNames.SHOW_ABS_GRID, "change", this.changeShowGrid);
+	showControls.showAbsGrid = showAbsGrid;
 	if (this.configManager.getConfigValue("showAbsGrid"))
 		showAbsGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
@@ -164,6 +167,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		showAbsDynamicGrid.setAttribute("checked", "checked");
 	td1.appendChild(document.createElement("br"));
 	var showLabels = addInput(td1, "checkbox", InterfaceNames.SHOW_LABELS, "change", this.changeShowGrid);
+	showControls.showLabels = showLabels;
 	if (this.configManager.getConfigValue("showLabels"))
 		showLabels.setAttribute("checked", "checked");
 	var td2 = document.createElement("td");
@@ -178,6 +182,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	td3.setAttribute("valign", "top");
 	var td4 = document.createElement("td");
 	var showArcs = addInput(td4, "checkbox", InterfaceNames.SHOW_ARCS, "change", this.changeShowArcs);
+	showControls.showArcs = showArcs;
 	if (this.configManager.getConfigValue("showArcs"))
 		showArcs.setAttribute("checked", "checked");
 	td4.setAttribute("width", "20%");
