@@ -197,6 +197,8 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		showArcs: true,
 		arcColor: 0x333399,
 		arcWidth: 2,
+		lineColor: 0xff0000,
+		lineWidth: 1,
 		reportRotation: true,
 		reportTransform: true,
 		showLegend: true,
@@ -221,6 +223,8 @@ ConfigManager.shaderFields = {
 		runAwayRadius: "f", 
 		convergeEpsilon: "f",
 		commonCyclePeriod: "i"};
-ConfigManager.styleFields = {gridLineColor: "color", markerSize: "f", arcColor: "color", arcWidth: 2};
+ConfigManager.styleFields = {gridLineColor: "color", markerSize: "f", arcColor: "color", arcWidth: 2, 
+		lineColor: "color", lineWidth: "f",
+		showLegend: "bool", legendMarkerSize: "f", legendPosition: "string", legendTextColor: "color"};
 ConfigManager.typeObjects = {canvasFormat: ConfigManager.canvasFormatFields,
 		style: ConfigManager.styleFields, shader: ConfigManager.shaderFields};

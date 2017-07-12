@@ -229,48 +229,8 @@ var DATA_IN_XML = true;
 		}
 
 		
-		function objectsInit(dataStructureArg /*an array of lines*/) {
-		//Not in use anymore, just parts of code for reference (or to be reused)
-			var dataStructure;
-			var xmlel = parseXml(dataStructureArg.join(""));
-			console.log(xmlel);
-			if (xmlel && xmlel.getElementsByTagName("parsererror").length == 0 ) {
-				console.log("!!!!!!!!!!!!!! arr", arr);
-				DATA_IN_XML = true;
-				dataStructure = xmlToStrings(xmlel);
-			} else {
-				dataStructure = dataStructureArg ;
-				console.log("!!!!!!!!! no xml");
-				DATA_IN_XML = false;
-			}
-
-			if (!dataStructureArg) {
-				reportStatus("objectsInit: No data structure received", "error");
-				return;
-			}
-			console.log("objectsInit", dataStructureArg);
-		
-		//TODO use in populating canvas
-		var dataObject = parseJuliaData(dataStructure); //in DataParser.js
-		curDataObject = dataObject;
-		mainShaderMap = initJuliaMap(dataStructure, true); //in RationalFuncs.js
-		//TODO that's how canvas is created!
-		mainCanvasContainer = new RSCanvasContainer(
-					document.getElementById('elements-container'), 
-					mainShaderMap, {width: 1000, height: 800}, "main"/*idArg*/);
-		//mainCanvasContainer.rsCanvas.rsCanvasId = 'main';
-		
-		outputLine = document.createElement('div');
-		mCCDOMElement.appendChild(outputLine);
-		getOutputDomElement(dataObject, outputLine, 3);
-		//TODO that's when data sends
-		mainCanvasContainer.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData);
-		
-		inited = true;
 			
-	}
-			
-		//------Event handlers for permanet page elements-------------
+		//------Event handlers for permanent page elements-------------
 		var showData = function() {
 			if (dataBlock)
 				dataBlock.removeAttribute('hidden');
@@ -343,7 +303,6 @@ var DATA_IN_XML = true;
 				console.log("Adding element ", dataNode);
 				//returns error string or nothing, if everything is Ok
 				//resEl - <updata> to send response to server. Description of created element should be added here
-				//TODO create list of elements in an existing window
 				var type = dataNode.nodeName;
 				var err = "";
 				
@@ -455,7 +414,7 @@ var DATA_IN_XML = true;
 								if (news.length > 0) {
 									resEl.setAttribute("status", "created");
 									resEl.setAttribute("object", objID);
-									//resEl.
+									
 									for (var ii = 0; ii< news.length; ii++)
 										resEl.appendChild(news[ii]);
 									sendData({data:xmlSerializer.serializeToString(resEl)});
@@ -510,7 +469,7 @@ var DATA_IN_XML = true;
 									if (!error) {
 										resEl.setAttribute("status", "updated");
 										resEl.setAttribute("object", objID);
-										getElementInfo(container, resEl);
+										if (type != "canvas") getElementInfo(container, resEl);
 										sendData({data:xmlSerializer.serializeToString(resEl)}); 
 	
 									}

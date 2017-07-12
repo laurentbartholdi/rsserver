@@ -564,7 +564,10 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		}
 		else {
 			lastDrawingLine = new THREE.Line(new THREE.Geometry(), 
-				new THREE.LineBasicMaterial({color: RSCanvas.drawingColor}));
+					//new THREE.LineBasicMaterial({color: RSCanvas.drawingColor}));
+					new THREE.LineBasicMaterial({color: that.configManager.getConfigValue("lineColor"), 
+						linewidth: that.configManager.getConfigValue("lineWidth")}));
+			console.log("new line", that.configManager.getConfigValue("lineWidth"));
 			drawedLines.push(lastDrawingLine);
 			lastDrawingLine.geometry.vertices.push(pos.clone().multiplyScalar(lineOverTheSphere));
 			while (lastDrawingLine.geometry.vertices.length < maxDrawingBufferSize)
@@ -1304,7 +1307,6 @@ RSCanvas.prototype = {
 				if (ddata.length > 0) data = data.getElementsByTagName("downdata")[0];
 				ddata = data.getElementsByTagName("canvas");
 				if (ddata.length > 0) data = data.getElementsByTagName("canvas")[0];
-				console.log("downdata node", data);
 				var transformParsed = false;
 				var pointsParsed = false;
 				var linesParsed = false;
@@ -1322,7 +1324,6 @@ RSCanvas.prototype = {
 					for (var i = 0; i < 4; i ++)
 						trarr.push(Complex.fromXML(transformData.childNodes[i]));
 					var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
-					console.log ("transform data", trarr, new_transform);
 					this.setTransform(new_transform);
 					transformParsed = true;
 					console.log("transform", trarr, new_transform.toString());
@@ -1330,7 +1331,6 @@ RSCanvas.prototype = {
 				
 				var pointsData = data.getElementsByTagName("point");
 				if (pointsData && pointsData.length > 0) {
-					console.log("parsing points", pointsData);
 					var pts = [];
 					var params = [];
 					function readAttribute(name,  i) {
@@ -1362,7 +1362,6 @@ RSCanvas.prototype = {
 				}
 				
 				var rotationData = data.getElementsByTagName("rotation")[0];
-				console.log("rotationData", rotationData);
 				if (rotationData) {
 					if (!rotationData.hasAttributes()) console.error("Data error. 'rotation' node has no attributes", rotationData);
 					else {
@@ -1526,14 +1525,17 @@ RSCanvas.prototype = {
 					}
 					var canvasFormatChanged = false;
 					var legendChanged = false;
+					var styleChanged = false;
 					for (var f in newConfig)
 						if (newConfig.hasOwnProperty(f)) {
 							if (ConfigManager.checkFieldType(f) == "canvasFormat")
 								canvasFormatChanged = true;
 							if (f.substr(0, 6) == "legend" || f == "showLegend")
 								legendChanged = true;
+							if (ConfigManager.checkFieldType(f) == "style")
+								styleChanged = true;
 						}
-					if (canvasFormatChanged) {
+					if (canvasFormatChanged || styleChanged) {
 						this.configManager.updateMultiple(newConfig);
 						if (legendChanged) this.updateLegendPosition();
 						this.render();
@@ -1541,7 +1543,6 @@ RSCanvas.prototype = {
 					configParsed = true;
 				}
 				
-				//if (linesParsed) transformDrawings();
 				this.newDataLoaded = true;
 				this.somethingChanged = true;
 
@@ -1697,7 +1698,6 @@ RSCanvas.prototype = {
 							}
 								
 						}
-						console.log(functionData, cycles);
 						var jColor = new THREE.Color();
 						jColor.set(this.configManager.getConfigValue("juliaColor"));
 						jColor.message = "Julia set"
@@ -1765,8 +1765,6 @@ RSCanvas.prototype = {
 		
 };
 
-//TODO config
-RSCanvas.drawingColor = 0xff0000;
 RSCanvas.PointConverter = function (rsc) {
 	this.canvasObj = rsc;
 	
