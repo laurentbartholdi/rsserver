@@ -1,5 +1,13 @@
 //Copyright (c) Anna Alekseeva 2013-2016
 
+//Use DEBUG variable to set amount of logs. 
+//0: no logs
+//1: warnings and errors
+//2: logs for important events, like opening and closing connections
+//3: all debug logs
+var DEBUG = 0;
+
+
 var port = process.argv[3] || 1729;
 var serverUrl = process.argv[2] || "127.0.0.1";
 var tcpPort = process.argv[4] || 1728;
@@ -15,22 +23,22 @@ var tcpSocket = null;
 
 
 var tcpSocketServer = net.createServer(function(c) { //'connection' listener
-	console.log('tcp client connected');
+	showLog('tcp client connected');
 	tcpSocket = c;
 	var clist = getConnectionsList();
 	if (clist) c.write(clist);
 	c.on('end', function() {
-	    console.log('tcp client disconnected');
+	    showLog('tcp client disconnected');
 	    tcpSocket = null;
 	});
 	c.on('error', function(err){
-		console.log("Error in TCP connection");
-		console.log(err.stack);
+		showWarning("Error in TCP connection");
+		showWarning(err.stack);
 		tcpSocket = null;
 	});
 	c.on('data', function(data){
 		processDownData(data, function(id, data, err){
-			console.log("downdata processed", id, err, data);
+			debugLog("downdata processed", id, err, data);
 			if (!err || err == "null") {
 				if (id) {				
 					if (id instanceof Array){//broadcast to several connections
@@ -57,7 +65,7 @@ var tcpSocketServer = net.createServer(function(c) { //'connection' listener
 		});
 		
 	} );
-  c.pipe(process.stdout);
+  if (DEBUG > 2) c.pipe(process.stdout);
 });
 tcpSocketServer.listen(tcpPort, function() { 
   console.log('TCP server is running at localhost, port', tcpPort);
@@ -65,7 +73,7 @@ tcpSocketServer.listen(tcpPort, function() {
 
 var WebSocketServer = require('ws').Server;
 var now = new Date();
-console.log(now + " Creating WebSocket server at URL " + serverUrl);
+showLog(now + " Creating WebSocket server at URL " + serverUrl);
 
 var server = http.createServer( function(req, res) {
 	var filename = require('url').parse(req.url).pathname || "index.html";
@@ -90,17 +98,15 @@ var server = http.createServer( function(req, res) {
 		localPath += filename;
 		fs.exists(localPath, function(exists) {
 			if(exists) {
-				//console.log("Serving file: " + localPath);
 				getFile(localPath, res, isValidExt);
 			} else {
-				console.log("File not found: " + localPath);
 				res.writeHead(404);
 				res.end();
 			}
 		});
  
 	} else {
-		console.log("Invalid file extension detected: " + ext);
+		displayError("Invalid file extension detected: " + ext);
 	}
  
 }).listen(port, serverUrl);
@@ -109,13 +115,13 @@ var wss = new WebSocketServer({server: server});
 console.log("WebSocket server is running. Type http://" + serverUrl.toString() + ":" + port + "/ in a browser to start.");
 
 wss.on('connection', function(ws) {
-	console.log((new Date()) + ' Connection from origin ' + ws.origin + '.');
+	showLog((new Date()) + ' Connection from origin ' + ws.origin + '.');
 
 	addConnection (ws);
     ws.on('message', function(message) {
-	  console.log("message received", message);
+	  debugLog("message received", message);
 	  processUpData(ws.id, message, function(result) {
-		  console.log("going to send to tcp: " + result);
+		  debugLog("going to send to tcp: " + result);
 		  if (tcpSocket) tcpSocket.write(result + "\n");});
          
     });
@@ -156,7 +162,7 @@ function getConnectionId (ws) {
 	return ws.id;
 }
 function removeConnection (ws) {
-	console.log ("Closing connection " + ws.id);
+	showLog ("Closing connection " + ws.id);
 	var dataObj = {updata: {$: {status: "removed", session: ws.session, object: ws.window}}};
 	var str = xmlBuilder.buildObject(dataObj).replace(/"/g, "'") + "\n"; 
 	if (tcpSocket) tcpSocket.write(str);
@@ -303,7 +309,7 @@ function processDownData(data, callback){
 									if (curSessionConnections[w].objects[o] == a.object)
 										id = w;
 							}
-						console.log("Connection id", id);
+						debugLog("Connection id", id);
 						if (id == "") err = "No registered object " + a.object;
 						else if (a.action == "create"){
 							var usedIds = [];
@@ -336,7 +342,6 @@ function processDownData(data, callback){
 }
 
 function checkObjectID(session, object, type, tempUsedIds) {
-	console.log("ceckObjectID", session, object, type);
 	var err="";
 	if (object.$ && object.$.id) {
 		if (!isObjectIdNew(session, object.$.id)) err = "Id " + object.$.id + " is already in use";
@@ -458,7 +463,7 @@ function getConnectionsList() {
 	}
 }
 function displayError(err) {
-	console.error(err);
+	showWarning(err);
 	if (err.toString().substring(0, 7) != "<updata") err = "<updata status='error'>" + err.toString() + "</updata>\n";
 	if (tcpSocket) tcpSocket.write(err);
 	
@@ -520,6 +525,21 @@ function sendOutput() {
 	//console.log(argsString);
 }
 
+
+function debugLog () {
+	showLogImpl (3, arguments);
+}
+
+function showLog() {
+	showLogImpl(2, arguments);
+}
+function showWarning() {
+	showLogImpl(1, arguments);
+}
+function showLogImpl(level, data) {	
+	if (DEBUG >= level) console.log(Array.prototype.join.call(data, ' '));
+}
+
 function cutCommand(line, index){
 	//console.log("cutCommand", line, index);
 	if (index == undefined) index = 0;
@@ -579,7 +599,7 @@ function getFile(localPath, res, mimeType) {
 	res.setHeader("Content-Type", mimeType);
 	res.statusCode = 200;
 	res.end(contents, mimeType, function() {});
-	console.log("Loaded: ", localPath);
+	debugLog("Loaded: ", localPath);
 	/*
 	fs.readFile(localPath, function(err, contents) {
 		if(!err) {
