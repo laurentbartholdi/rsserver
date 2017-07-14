@@ -5,8 +5,9 @@
 //1: warnings and errors
 //2: logs for important events, like opening and closing connections
 //3: all debug logs
-var DEBUG = 0;
 
+var DEBUG = 0;
+{ var d = process.argv[1].match(/debug([0-9]*)/); if (d) DEBUG = d[1]; }
 
 var port = process.argv[3] || 1729;
 var serverUrl = process.argv[2] || "127.0.0.1";
