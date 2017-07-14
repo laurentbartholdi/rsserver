@@ -74,7 +74,7 @@ tcpSocketServer.listen(tcpPort, function() {
 
 var WebSocketServer = require('ws').Server;
 var now = new Date();
-showLog(now + " Creating WebSocket server at URL " + serverUrl);
+console.log(now + " Creating WebSocket server at URL " + serverUrl);
 
 var server = http.createServer( function(req, res) {
 	var filename = require('url').parse(req.url).pathname || "index.html";
