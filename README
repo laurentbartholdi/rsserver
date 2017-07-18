@@ -63,8 +63,10 @@ TCP->Web
 Web->TCP
 <updata status='created' session='s1' object='w0'><head id='head0'>New title of the window</head></updata>
 
-
+-----------------------------------
 Creating an object in a window
+-----------------------------------
+
 TCP->Web <downdata session='s1' obejct='w0' action='create'><button/></downdata>
 Web->TCP <updata session="s1" object="w0" status="created"><button id="button0"/></updata>
 Id of the button is generated automatically.
@@ -124,7 +126,9 @@ Web->TCP
 	</canvas>
 </updata>
 
+--------------------------------------
 Adding some objects to canvas
+--------------------------------------
 TCP->Web
 "<downdata action="populate" session="s1" object="canvas0">
 	<point color="#ff6666" movable="false"><cn re="0" im="1"/></point>
@@ -182,6 +186,35 @@ Web->TCP
 	</line>
 </updata>
 <updata status='updated' object='canvas0' session='s1'/>
+
+------------------------------
+Update a point or arc.
+----------------------------
+Change appearance and position of a point
+TCP->Web
+<downdata action="populate" object="canvas0UIpoint2" session="s1">
+	<config key="color" value="#ff6600"/>
+	<config key="radius" value=".4"/>
+	<sp x="0" y="1" z="0"/>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0" session="s1">
+	<point id="canvas0UIpoint2" canvas="canvas0" color="#66ff66" movable="false">
+		<cn re="0" im="0"/>
+		<label type="number"/>
+	</point>
+</updata>
+
+Change appearance of an arc
+TCP->Web
+<downdata action="populate" object="canvas0UIarc3" session="s1">
+	<config key="color" value="#ff6600"/>
+	<config key="width" value="4"/>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0" session="s1">
+	<arc color="#ff6600" width="4"/>
+</updata>
 
 
 Remove an object
