@@ -1,4 +1,4 @@
-//Copyright (c) Anna Alekseeva 2013-2016
+//Copyright (c) Anna Alekseeva 2013-2017
 
 var ConfigManager = function (defaults) {
 	this.resetConfig();
@@ -14,7 +14,6 @@ ConfigManager.prototype = {
 		constructor: ConfigManager,
 		resetConfig: function () {
 			var str = JSON.stringify(ConfigManager.defaultConfig);
-			console.log("ConfigManager.defaultConfig", str);
 			this.configObj = JSON.parse(str);			
 		},
 		getConfigValue: function (key){
@@ -23,10 +22,6 @@ ConfigManager.prototype = {
 				res = this.configObj[key];
 				present = true;
 			}			
-			/*else if (this.defaultConfig.hasOwnProperty(key)) {
-				res = this.defaultConfig[key];
-				present = true;
-			}*/
 			if (present) {
 				if (ConfigManager.getFieldValueType(key) == "color")
 					return new THREE.Color(res);
@@ -52,7 +47,6 @@ ConfigManager.prototype = {
 		},
 
 		setConfigValue: function (key, value, silent) {
-			console.log("setConfigValue", key, value);
 			var oldValue = this.configObj[key];
 			this.configObj[key] = value;
 			if (oldValue != value && !silent) this.invalidateConfig(key);
@@ -75,7 +69,6 @@ ConfigManager.prototype = {
 ConfigManager.parseString = function(arg, res) {
 	var res = res || {};
 	var arr = arg.constructor === Array ? arg : arg.split(" ");
-	console.log("ConfigManager: parsing string", arg, arr);
 	if (arr[0].toLowerCase() == "config") {
 		arr.shift();
 	} else {
@@ -107,7 +100,6 @@ ConfigManager.parseString = function(arg, res) {
 			if (g) res.flags[g] = true;
 		}
 	}
-	console.log("Config parsed",arg, res);
 	return res;
 };
 
@@ -117,8 +109,6 @@ ConfigManager.parseXMLNode = function (node, res) {
 	else {
 		var res = res || {};
 		if (!res.flags) res.flags = {canvasFormat: false, style: false, shader: false};
-		//var key = node.attributes.key.nodeValue;
-		//var val = node.attributes.value.nodeValue;
 		var key = node.getAttribute("key");
 		var val = node.getAttribute("value");
 		return ConfigManager.parseString(["config", key, val], res);

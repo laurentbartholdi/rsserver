@@ -242,13 +242,22 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		return res;
 	}
 	
-	this.removeObject = function (id) {
-		var ptsData = this.getSelectedPointsData();
+	function getPointById(id) {
+		var ptsData = that.getSelectedPointsData();
+		var res = null;
 		for (var i = 0; i < ptsData.length; i++){
 			if (ptsData[i].id == id) {
-				removeAnchor(ptsData[i].anchor);
-				return true
+				res = ptsData[i];
 			};				
+		}
+		return res;
+	}
+	
+	this.removeObject = function (id) {
+		var pt = getPointById(id);
+		if (pt) {
+			removeAnchor(pt.anchor);
+			return true;
 		}
 		var drw = this.getDrawings();
 		for (var i = 0; i < drw.length; i++) {
@@ -280,6 +289,136 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			if (this.arcStyles[i].id == id) {return this.getSnapshotObjectElement("arc", this.arcStyles[i]);};
 		}
 		return false;
+		
+	}
+	
+	this.updatePoint = function (dataNode) {
+		
+		var point = getPointById(dataNode.getAttribute("object"));
+		if (point) {
+			var updated = false;
+			var cn = dataNode.getElementsByTagName("cn")[0];
+			var sp = dataNode.getElementsByTagName("sp")[0];
+			var lbl = dataNode.getElementsByTagName("label")[0]
+			if (lbl) {
+				var text = "empty";
+				var labelType = lbl.getAttribute("type");
+				if (labelType) {
+					switch (labelType) {
+					case "text": {
+						if (lbl.childNodes[0]) {
+							point.anchor.noLabel = false;
+							point.anchor.showValue = false;
+							text = lbl.childNodes[0].nodeValue;
+						}
+						else console.warn("No text in a label of type \"text\"", lbl);
+						break;
+					}
+					case "number": {
+						text = "";
+						point.anchor.noLabel = false;
+						point.anchor.showValue = true;
+						if (point.message) delete point.message;
+						break;
+					}
+					case "none": {
+						point.anchor.noLabel = true;
+						break;
+					}
+					}
+				}
+				else if (lbl.childNodes[0]) text = lbl.childNodes[0].nodeValue;
+				if (text) point.message = text;
+				point.anchor.updateLabelText(text);
+				updated = true;
+			}
+			if (cn || sp){
+				var value = cn ? Complex.fromXML(cn) : CU.localToComplex(this.converter.xmlSPToLocal(sp));
+				point.anchor.setValue(value);
+				updated = true;
+			}
+			var configs = dataNode.getElementsByTagName("config");
+			if (configs.length > 0) {
+				var updateStyle = false;
+				for (var j = 0; j < configs.length; j++){
+					var key = configs[j].getAttribute("key");
+					var value = configs[j].getAttribute("value");
+					if (key == "movable") {
+						value = ConfigManager.parseBool(value);
+						point.movable = value;
+						point.anchor.fixed = !value;
+					}
+					if (key == "color") {
+						value = ConfigManager.parseColor(value);
+						getLabelTextColors(value, point);
+						updateStyle = true;
+					}
+					if (key == "radius") {
+						value = parseFloat(value);
+						point.pointerSize = value;
+						updateStyle = true;
+					}
+				}
+				if (updateStyle) {
+					point.anchor.updateStyle(point);
+					updated = true;
+				}
+			}
+			if (updated) {
+				this.somethingChanged = true;
+				this.canvas3d.dispatchEvent(new CustomEvent("selectedPointsChanged", {detail: {action: "updated", 
+					object: this.serverId,
+					data: this.getSnapshotObjectElement("point", point)}}));
+			}
+			return updated;
+		} else {
+			return false;
+		}
+	}
+	
+	this.updateArc = function (dataNode) {
+		var arcStyle, arc; 
+		var id = dataNode.getAttribute("object");
+		for (var i = 0; i < this.arcStyles.length; i++){
+			if (this.arcStyles[i].id == id) {
+				arcStyle = this.arcStyles[i];
+				arc = this.arcs[i];
+			};
+		}
+
+		if (arc) {
+			var updated = false;
+			var configs = dataNode.getElementsByTagName("config");
+			var eventData = createEmptyNode("arc");
+			if (configs.length > 0) {
+				for (var j = 0; j < configs.length; j++){
+					var key = configs[j].getAttribute("key");
+					var value = configs[j].getAttribute("value");
+					if (key == "color") {
+						eventData.setAttribute("color", value);
+						value = ConfigManager.parseColor(value);
+						arcStyle.color = value;
+						arc.material.color.set(value);
+						updated = true;
+					}
+					if (key == "width") {
+						eventData.setAttribute("width", value);
+						value = parseFloat(value);
+						arcStyle.width = value;
+						arc.material.linewidth = value;
+						updated = true;
+					}
+				}
+			}
+			if (updated) {
+				arc.material.needsUpdate = true;
+				this.somethingChanged = true;
+				this.canvas3d.dispatchEvent(new CustomEvent("arcsChanged", {detail:{action: "updated", object: this.serverId, data: eventData}}));
+			}
+			return updated;
+		} else {
+			return false;
+		}
 		
 	}
 
@@ -751,15 +890,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					if (pars.color) {
 						if (pars.color.substr(0, 2) == "0x") pars.color = "#" + pars.color.substr(2-pars.color.length, pars.color.length-2);
 						var c = new THREE.Color(pars.color);
-						argParameters.pointerColor = c;
-						var bc = new THREE.Color(0, 0, 0);
-						bc.lerp(c, 0.3);
-						argParameters.backgroundColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: .8 };
-						bc.set("#ffffff");
-						bc.lerp(c, 0.3);
-						argParameters.textColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
-						bc.lerp(c, 0.3);
-						argParameters.borderColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
+						getLabelTextColors(c, argParameters);
 					}
 					if (pars.radius) argParameters.pointerSize = parseFloat(pars.radius);
 					if (pars.message) argParameters.message = pars.message;
@@ -785,6 +916,19 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
 		}
 		that.somethingChanged = true;
+	}
+	function getLabelTextColors(c, res) {
+		if (!res) res = {}
+		res.pointerColor = c;
+		var bc = new THREE.Color(0, 0, 0);
+		bc.lerp(c, 0.3);
+		res.backgroundColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: .8 };
+		bc.set("#ffffff");
+		bc.lerp(c, 0.3);
+		res.textColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
+		bc.lerp(c, 0.3);
+		res.borderColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
+		return res;
 	}
 	function removeAnchor (pm) {
 		if (pm.numInArray !== undefined) {
@@ -1240,11 +1384,15 @@ RSCanvas.prototype = {
 		
 		getSnapshotPointElement: function(data, pntEl){
 			pntEl.appendChild(data.anchor.value.toXMLObj());
+			var lbl = createEmptyNode("label");
 			if (data.message) {
-				var lbl = createEmptyNode("label");
-				lbl.appendChild(document.createTextNode(data.message));					
-				pntEl.appendChild(lbl);
+				lbl.appendChild(document.createTextNode(data.message));	
+				lbl.setAttribute("type", "text");
 			}
+			if (data.anchor.showValue) lbl.setAttribute("type", "number");
+			if (data.anchor.noLabel) lbl.setAttribute("type", "none");
+			pntEl.appendChild(lbl);
+			
 			if (data.color) pntEl.setAttribute("color", data.color);
 			if (data.radius) pntEl.setAttribute("radius", data.radius);
 			if (data.hasOwnProperty("movable")) pntEl.setAttribute("movable", data.movable);
@@ -1347,9 +1495,33 @@ RSCanvas.prototype = {
 						else if (cnNode) pts.push(Complex.fromXML(cnNode));
 						else pts.push(CU.localToComplex(this.converter.xmlSPToLocal(spNode)));
 						var label = pointsData[i].getElementsByTagName("label")[0];
-						if (label && label.childNodes[0]) {
+						if (label) {
+							var labelType = label.getAttribute("type");
 							params[i] = {};
-							params[i].message = label.childNodes[0].nodeValue;
+							if (labelType) {
+								switch (labelType) {
+								case "text" : {
+									if (label.childNodes[0]) {
+										params[i].message = label.childNodes[0].nodeValue;
+									} else {
+										console.warn("No text inside a label of type \"text\"", label);
+									}
+									break;
+								}
+								case "number" : {
+									break;
+								}
+								case "none" : {
+									params[i].message = "empty";
+									break;
+								}
+								default: 
+									console.warn("Incorrect label type", labelType);
+								}
+							}
+							else if (label.childNodes[0]) {
+								params[i].message = label.childNodes[0].nodeValue;
+							}
 						}
 						readAttribute("color", i);
 						readAttribute("radius", i);

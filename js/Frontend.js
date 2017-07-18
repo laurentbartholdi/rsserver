@@ -460,10 +460,10 @@ var DATA_IN_XML = true;
 											error = "No button with id '" + objID + "' found";
 										}
 										break;
-										}
-										default: {
-											error = "Action 'populate' or 'update' is not valid for '" + type + "' object";
-											break;
+									}
+									default: {
+										error = "Action 'populate' or 'update' is not valid for '" + type + "' object";
+										break;
 										}
 									}
 									if (!error) {
@@ -529,7 +529,7 @@ var DATA_IN_XML = true;
 										var tp = containers[i].rscc.rsCanvas.hasObject(objID);
 										switch (action) {
 										case "remove": {
-											if (tp == "point" || tp == "arc" || "line")
+											if (tp == "point" || tp == "arc" || tp == "line")
 												containers[i].rscc.rsCanvas.removeObject(objID);
 											else sendError("Removing of " + tp + " is not implemented yet");
 											break;
@@ -542,6 +542,15 @@ var DATA_IN_XML = true;
 											sendData({data:xmlSerializer.serializeToString(resEl)});
 											break;
 											
+										}
+										case "populate":
+										case "update": {
+											if (tp == "point") {
+												containers[i].rscc.rsCanvas.updatePoint(downDataEl);
+											} else if (tp == "arc") {
+												containers[i].rscc.rsCanvas.updateArc(downDataEl);
+											} else sendError("No action " + action + " available for " + tp);
+											break;
 										}
 										default : {
 											sendError("No action " + action + " available for object inside a canvas");

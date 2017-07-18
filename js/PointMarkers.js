@@ -147,7 +147,12 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 	    }
 
 	if ( parameters === undefined ) parameters = {};
-	if (parameters.message !== undefined) this.message = parameters.message;
+	if (parameters.message !== undefined) {
+		this.message = parameters.message;
+		this.showValue = false;
+	} else {
+		this.showValue = true;
+	}
 	this.noLabel = (parameters.message == "empty"); 
 
 	copyObject(RSTextLabel.baseStyle, this.style);
@@ -155,6 +160,19 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 	var geometry = new THREE.SphereBufferGeometry( this.style.pointerSize, 32, 32 ); 
 	var material = new THREE.MeshLambertMaterial({color: this.style.pointerColor});
 	var sph = new THREE.Mesh( geometry, material );
+	this.updateStyle = function(styleObj) {
+		copyObject(styleObj, this.style);
+		if (styleObj.hasOwnProperty("pointerSize")) {
+			this.style.pointerSize = styleObj.pointerSize;
+			sph.geometry = new THREE.SphereBufferGeometry( this.style.pointerSize, 32, 32 );
+			
+		}
+		if (styleObj.hasOwnProperty("pointerColor")) {
+			this.style.pointerColor = styleObj.pointerColor;
+			sph.material = new THREE.MeshLambertMaterial({color: this.style.pointerColor});
+			this.updateLabelText();
+		}
+	}
 	var pointer = new THREE.Group();
 	pointer.add(sph);
 	this.labelWidth = 1;
@@ -165,7 +183,6 @@ var RSTextLabel = function (arg, rsCanvas, parameters){
 	sph.marker = this;
 	if (!this.noLabel) this.updateLabelText(this.message);
 	var that = this;
-	//this.canvas.canvas3d.addEventListener("sphereMoved", function(e){that.updateObjectRotation();});
 	this.canvas.labelManager.registerLabel(this);
 }
 RSTextLabel.prototype = Object.create(PointMarker.prototype);
@@ -238,36 +255,43 @@ RSTextLabel.prototype.clearContext = function () {
 
 RSTextLabel.baseInfinityRadius = 500;//Points with greater absolute values are shown as "Infinity" when trivial Moebius transformation is applied
 RSTextLabel.prototype.updateLabelText = function (message){
-	message = message || (this.showInfinity(this.canvas.currentTransform, this.value) ? "∞" : this.value.toString(true, this.style.precision));
+	if (message == "empty") this.noLabel = true;
+	if (this.showValue && this.value && !message) message = this.showInfinity(this.canvas.currentTransform, this.value) ? "∞" : this.value.toString(true, this.style.precision)
+	if (!this.showValue && message) this.message = message;
+	if (!this.showValue && !message) message = this.message;
+	if (this.showValue) this.message = "";
 	this.clearContext();
-    var context = this.labelContext;
-    var w, h, textWidth;
-	context.font = /*"Bold " + */this.style.fontSize + "px " + this.style.fontFace;
-    	    var metrics = context.measureText( message );
-    	    textWidth = metrics.width;
-    	    w = 2*this.style.hMargine + textWidth + this.style.borderThickness;
-    	    h = 2*this.style.vMargine + this.style.fontSize*1. + this.style.borderThickness;
-    	
-    	    
-    	    function makeRgbaString(color) {
-    	    	return "rgba(" + color.r + "," + color.g + "," + color.b + "," + color.a +")"; 
-    	    }
-    context.fillStyle = makeRgbaString(this.style.backgroundColor);
-    context.strokeStyle = makeRgbaString(this.style.borderColor);
-    context.lineWidth = this.style.borderThickness;
-    roundRect(context, (this.labelCanvas.width - w)/2, (this.labelCanvas.height - h)/2, w, h, this.style.hMargine/2);
-    context.fillStyle = makeRgbaString(this.style.textColor);
-    context.fillText( message, this.labelCanvas.width/2 - textWidth/2, this.labelCanvas.height/2 + this.style.fontSize*.5-this.style.hMargine/2);
-    this.label.material.map.needsUpdate = true;
-    this.labelWidth = this.style.resolution*w;
-    this.labelHeight = this.style.resolution*h;
-    this.updateObjectRotation();
+	if (message && !this.noLabel) {
+	    var context = this.labelContext;
+	    var w, h, textWidth;
+		context.font = this.style.fontSize + "px " + this.style.fontFace;
+	    	    var metrics = context.measureText( message );
+	    	    textWidth = metrics.width;
+	    	    w = 2*this.style.hMargine + textWidth + this.style.borderThickness;
+	    	    h = 2*this.style.vMargine + this.style.fontSize*1. + this.style.borderThickness;
+	    	
+	    	    
+	    	    function makeRgbaString(color) {
+	    	    	return "rgba(" + color.r + "," + color.g + "," + color.b + "," + color.a +")"; 
+	    	    }
+	    context.fillStyle = makeRgbaString(this.style.backgroundColor);
+	    context.strokeStyle = makeRgbaString(this.style.borderColor);
+	    context.lineWidth = this.style.borderThickness;
+	    roundRect(context, (this.labelCanvas.width - w)/2, (this.labelCanvas.height - h)/2, w, h, this.style.hMargine/2);
+	    context.fillStyle = makeRgbaString(this.style.textColor);
+	    context.fillText( message, this.labelCanvas.width/2 - textWidth/2, this.labelCanvas.height/2 + this.style.fontSize*.5-this.style.hMargine/2);
+	    this.label.material.map.needsUpdate = true;
+	    this.labelWidth = this.style.resolution*w;
+	    this.labelHeight = this.style.resolution*h;
+	    this.updateObjectRotation();
+	    this.label.visible = true;
+	} else {this.label.visible = false}
     
 	
 }
 
 RSTextLabel.prototype.setValue = function (val) {
-	if (this.labelContext && !this.message && !this.noLabel) {
+	if (this.labelContext && !this.message && !this.noLabel && this.showValue) {
 		this.updateLabelText((this.canvas && this.showInfinity(this.canvas.currentTransform, val))? "∞" :  val.toString(true, this.style.precision || 3));		
 	}
 	PointMarker.prototype.setValue.call(this, val);
