@@ -24,11 +24,10 @@ Click and drag to rotate the sphere.
 
 For Moebius transformation, double-click somewhere on the sphere surface to add a reference point. (In current design the reference point for Moebius transformations looks like a green diamond) Double-click a reference point to remove it. Drag a reference point to apply the transformation moving this point to the new place and living the other reference points unchanged. It's also possible to use only two points for Moebius transformation: if you move one of the points, the second point and it's opposite will be unchanged. The button "Reset transformation" make the transformation applyed to the sphere's surface, identical. The button "Clear reference points" removes all reference points, but leaves the transformation unchanged.
 
-Ctrl-click and drag to draw a line on the sphere's surface. The button "Clear drawing" removes all lines, drawn on the sphere's surface.
+Press Ctrl key, then right-press and drag mouse around to draw a line on the sphere's surface. Press Ctrl and left-click to delete the last drawn line. When the If there are new lines on the sphere, the message to the server is sent when the Ctrl key is released .
+
 
 Shift-double-click to create a point on the sphere. (In current design a point looks like a pink ball with a flag with number on it) The point is dragable. Shift-double-click on a point to remove it.
-
-"Submit" button sends to the server information about the canvas: surface image, transformation, rotation, arcs, points and lines. 
 
 GRID AND LABELS ON THE SPHERE
 
