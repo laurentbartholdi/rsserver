@@ -612,10 +612,11 @@ var DATA_IN_XML = true;
 							 if (action=="request") {
 								var windowNode = resEl.appendChild(createEmptyNode("window"));
 								var error = "";
-								for (var e in mCCDOMElement.childNodes ) {
+								var containers = mCCDOMElement.getElementsByClassName("element-container");
+								for (var e in containers ) {
 									//TODO byClassName or html
-									if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
-										error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
+									if (containers[e] instanceof Element)
+										error = getElementInfo (containers[e], windowNode);
 								}
 								if (error) sendError(error)
 								else {
