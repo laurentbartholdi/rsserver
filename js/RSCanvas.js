@@ -29,8 +29,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
         		}
         	}
 
-        	if (sphere_index >= 0 && event.ctrlKey) {
-        		
+        	if (sphere_index >= 0 && event.ctrlKey && isRightButton(event)) {
     	    	curMouseLocalPos = that.converter.canvasPosToLocal(canvasPos);
     	    	drawingOnTheSphere = true;
     		    vectorStartDraw(curMouseLocalPos);
@@ -89,18 +88,39 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     		}
     	}
     };
+    
+    function isRightButton(event) {
+   		//check if right mouse button pressed
+	    var isRightMB;
+	    event = event || window.event;
+
+	    if ("which" in event)  // Gecko (Firefox), WebKit (Safari/Chrome) & Opera
+	        isRightMB = event.which == 3; 
+	    else if ("button" in event)  // IE, Opera 
+	        isRightMB = event.button == 2; 
+	    
+	    return isRightMB;
+
+    }
+    
+    newLinesData = [];
     this.handleMouseUp = function(event) {
         mouseDown = false;
         if (drawingOnTheSphere) {
         	if (that.curDrawedLineData) {
-			that.canvas3d.dispatchEvent( new CustomEvent("linesChanged", 
-					{detail: {action: "created", 
-						object: that.curDrawedLineData.id,
-						data: that.getSnapshotObjectElement("line", that.curDrawedLineData)}}));
+        		newLinesData.push(that.curDrawedLineData);
         	}
         	
         }
         drawingOnTheSphere = false;
+		
+        if (event.ctrlKey && !isRightButton(event)) {
+        	if (newLinesData.length) {
+        		newLinesData.pop();
+        		that.deleteLastDrawing(true);
+        	} else that.deleteLastDrawing(false);
+        }
+	
         
         if (rotating && rotationChanged && that.configManager.getConfigValue("reportRotation") && movingAnchor < 0) {
         	that.canvas3d.dispatchEvent(new CustomEvent("rotationChanged", {detail: {data: that.getRotationElement(), object: that.serverId}}));
@@ -125,6 +145,27 @@ var RSCanvas = function(canvas, materialData, canvasData) {
         movingSelectedPoint = null;   
         that.canvas3d.style.cursor = "default";
     };
+
+    this.handleKeyUp = function (event) {
+     	if (event.keyCode == 17) { //Ctrl
+           if (drawingOnTheSphere || newLinesData.length) {
+            	if (that.curDrawedLineData) {
+            		newLinesData.push(that.curDrawedLineData);
+            	var eventData = [];
+            	while (newLinesData.length) {
+            		eventData.push(that.getSnapshotObjectElement("line", newLinesData.shift()));
+            	}
+            	if (eventData.length)
+            		that.canvas3d.dispatchEvent( new CustomEvent("linesChanged", 
+    					{detail: {action: "created", 
+    						object: that.serverId,
+    						data: eventData}}));
+            	}
+            	
+            }
+            drawingOnTheSphere = false;
+    	}
+    }
 
     this.handleMouseMove = function(event) {
         if (!mouseDown) {
@@ -606,7 +647,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		that.somethingChanged = true;
 	}
 	
-	function removeDrawing(index) {
+	function removeDrawing(index, silent) {
 		var data = that.drawedLinesData.splice(index, 1)[0];
 		if (data && data.id) {
 			var i = 0;
@@ -616,7 +657,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					that.sphere.remove(ln);
 				} else i++;
 			}
-			that.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "removed", object: data.id}}));
+			if (!silent) that.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "removed", object: data.id}}));
 			that.linesUpdated = true;
 		}
 	}
@@ -752,6 +793,10 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		
 		this.somethingChanged = true;
 	};
+	this.deleteLastDrawing = function (silent) {
+		var l = this.drawedLinesData.length;
+		if (l > 0) removeDrawing(l-1, silent);
+	}
 	
 	function resetDrawing() {
 		var v0 = new THREE.Vector3();
@@ -1208,6 +1253,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     //?????
     document.addEventListener("mouseup", this.handleMouseUp);
     document.addEventListener("mousemove",this.handleMouseMove);
+    document.body.onkeyup = that.handleKeyUp;
 
 	this.render();
 

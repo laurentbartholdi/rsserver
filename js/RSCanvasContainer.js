@@ -172,13 +172,13 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		showLabels.setAttribute("checked", "checked");
 	var td2 = document.createElement("td");
 	td2.setAttribute("valign", "top");
-	addButton(td2, InterfaceNames.SUBMIT, this.collectData);
-	td2.appendChild(document.createElement("br"));
-	addButton(td2, InterfaceNames.CLEAR_DRAWING, this.clearDrawing);
+	//addButton(td2, InterfaceNames.SUBMIT, this.collectData);
+	//td2.appendChild(document.createElement("br"));
+	//addButton(td2, InterfaceNames.CLEAR_DRAWING, this.clearDrawing);
 	var td3 = document.createElement("td");
 	addButton(td3, InterfaceNames.RESET_TRANSFORM, this.resetTransform);
-	td3.appendChild(document.createElement("br"));
-	addButton(td3, InterfaceNames.CLEAR_REFPOINTS, this.removeAnchors);
+	//td3.appendChild(document.createElement("br"));
+	addButton(td2, InterfaceNames.CLEAR_REFPOINTS, this.removeAnchors);
 	td3.setAttribute("valign", "top");
 	var td4 = document.createElement("td");
 	var showArcs = addInput(td4, "checkbox", InterfaceNames.SHOW_ARCS, "change", this.changeShowArcs);
