@@ -1,16 +1,11 @@
-//Copyright (c) Anna Alekseeva 2013-2016
+//Copyright (c) Anna Alekseeva 2013-2017
 var DATA_IN_XML = true;
 
-		var mainCanvasContainer;//not in use
-		var mainShaderMap;//not in use
-		var outputLine; //not in use
-		var curDataObject;//not in use
-		var inited = false;//not in use
 		var winID = ""; //The id of the current window, obtained from the query-string (TODO only if it's not empty)
 		var connection =  null; //A web-socket connection to communicate with rsserver
 		var messageBlock, dataBlock, showDataBtn, hideDataBtn, logView, pageTitle; //Permanent page elements
 		var mCCDOMElement; //The dynamic html-block, to add elements on the commands from the server 
-		var pageDataXML; //XML element to store data about the page structure and send to server by request. Not implemented yet
+		var pageDataXML; //XML element to store data about the page structure and send to server by request.
 		 
 		function pageInit() {
 			//Executes when the html-page is loaded
@@ -18,13 +13,15 @@ var DATA_IN_XML = true;
 			pageDataXML = document.createElement("window");
 
 			mCCDOMElement = document.getElementById('elements-container');
-			pageTitle = mCCDOMElement.appendChild(document.createElement("h1"));
+			//pageTitle = mCCDOMElement.appendChild(document.createElement("h1"));
+			pageTitle = document.createElement("h1");
 			pageTitle.innerHTML = document.title;
 			pageDataXML.appendChild(document.createElement("head")).innerHTML = document.title;
 			
 			logView = createLogView();
 
 			mCCDOMElement.parentElement.appendChild(logView);
+			mCCDOMElement.parentNode.insertBefore(pageTitle, mCCDOMElement);
 			
 			window.WebSocket = window.WebSocket || window.MozWebSocket;
 			 
@@ -63,7 +60,31 @@ var DATA_IN_XML = true;
 			};
 			
 		}
-
+		
+		function adopt (child, newParent) {
+			if (child) {
+				if( child.parentNode) 
+					child.parentNode.removeChild(child);
+				if (newParent && (typeof newParent.appendChild === "function")) 
+					newParent.appendChild(child);
+			}
+		}
+		
+		function halm (oldElement, newElement) {
+			if (oldElement.nodeType == 1) {
+				if (!newElement) 
+					newElement = document.createElement(oldElement.nodeName);
+				for (var f = 0; f < oldElement.attributes.length; f++) {
+					
+						newElement.setAttribute(oldElement.attributes[f].name, oldElement.attributes[f].value)
+				};
+				for (var i = 0; i < oldElement.childNodes.length; i++)
+					newElement.appendChild(halm(oldElement.childNodes[i]));
+			} else if (oldElement.nodeType == 3)
+					newElement = document.createTextNode(oldElement.nodeValue);
+		
+			return newElement;			
+		}
 
 		function addCanvas (dataElement, pageElement) {
 			if (dataElement.nodeName != "canvas") return "Invalid node name '" + dataElement.nodeName + "', expecting 'canvas'"; 
@@ -76,7 +97,7 @@ var DATA_IN_XML = true;
 				}
 			}
 			attributesToObject(["width", "height", "color", "geometry", "name"], dataElement, canvasData); 
-			canvasData.bkgColor = canvasData.color||"#333333";//; //backward compatibility
+			canvasData.bkgColor = canvasData.color||"#333333"; //backward compatibility
 			var rscc = new RSCanvasContainer(
 					pageElement, 
 					surfaceData, 
@@ -129,18 +150,6 @@ var DATA_IN_XML = true;
 				createSendEvent(event.target, updata);
 			} else {
 				console.error("No detail for selectedPointsChanged or arcsChanged event");
-			}
-		}
-		function onCanvasUpdated_(event) {
-			var updata = createEmptyNode("updata");
-			console.log("canvas updated event catched", event, event.target);
-			if (event.detail) {
-				updata.setAttribute("status", "updated");
-				updata.setAttribute("object", event.detail.object);
-				updata.appendChild(event.detail.data);
-				createSendEvent(event.target, updata);
-			} else {
-				console.error("No detail for rotationChanged or transformChanged event");
 			}
 		}
 		
@@ -223,6 +232,7 @@ var DATA_IN_XML = true;
 					resNode.setAttribute("id", parentContainer.getAttribute("id"));
 					resEl.appendChild(resNode);
 				}
+				console.log("getElementInfo", type, parentContainer, parentContainer.getAttribute("id"))
 
 			} //type is present
 			return err;
@@ -316,6 +326,35 @@ var DATA_IN_XML = true;
 								document.title = Titles.TITLE;
 							}
 					
+				} else if (type == "template") {
+					var butWhy = document.createElement("div");
+					halm(dataNode, butWhy); //don't ask
+					var wrappers = butWhy.getElementsByClassName("wrapper");	
+					for (var i = 0; i < wrappers.length; i++) {
+						var id = wrappers[i].getAttribute("content-id");
+						if (!id) err += "No content id for html wrapper"
+						else {
+							adopt(document.getElementById(id), wrappers[i]);
+						}
+					}
+					var replace = ConfigManager.parseBool(butWhy.getAttribute("replace"));
+					var containersLive = mCCDOMElement.getElementsByClassName("element-container");
+					var containers = [];
+					for (var i = 0; i < containersLive.length; i++)
+						containers.push(containersLive[i]);
+					if (replace) {
+						while (mCCDOMElement.hasChildNodes()) mCCDOMElement.removeChild(mCCDOMElement.firstChild);
+					}
+					while (butWhy.hasChildNodes()) {
+						var item = butWhy.firstChild;
+						butWhy.removeChild(item);
+						mCCDOMElement.appendChild(item);
+					}
+					for (var i = 0; i < containers.length; i++){
+						if (!containers[i].parentNode) {
+							adopt(containers[i], mCCDOMElement);
+						}
+					}
 				} else {
 					
 					var newContainer = document.createElement("div");
@@ -355,8 +394,18 @@ var DATA_IN_XML = true;
 								err = "The object of type " +  type + " can't be attached to a window"
 						}
 					}
-					if (err == "") mCCDOMElement.appendChild(newContainer);
+					if (err == "") {
+						var wrappers = mCCDOMElement.getElementsByClassName("wrapper");
+						var wrapperFound = false;
+						for (var i = 0; i < wrappers.length; i ++)
+							if (wrappers[i].getAttribute("content-id") == elID) {
+								wrappers[i].appendChild(newContainer);
+								wrapperFound = true;
+							}
+						console.log(wrapperFound);
+						if (!wrapperFound) mCCDOMElement.appendChild(newContainer);
 					}
+				}
 				
 				resEl.appendChild(dataNode.cloneNode(true));
 				if (!err || err == "null") pageDataXML.appendChild(dataNode.cloneNode(true));
@@ -380,7 +429,7 @@ var DATA_IN_XML = true;
 		function onNewData(data) {
 			console.log("on new data "+data);
 			var xmlel = parseXml(data);
-			console.log("" + xmlel);
+			console.log(xmlel);
 			var arr;
 			if (xmlel && xmlel.getElementsByTagName("parsererror").length == 0 ) {
 				DATA_IN_XML = true;
@@ -491,15 +540,15 @@ var DATA_IN_XML = true;
 							
 						} else if (action == "create") {
 							 if ( downDataEl.getElementsByTagName("window").length > 0){
-								//open new window
-								//TODO allow multiple windows?
-									var session = downDataEl.getAttribute("session");
-									if (!session) sendError ("No session attribute");
-									else {
-										var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
-										window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
-									}
-	
+									//open new window
+										var session = downDataEl.getAttribute("session");
+										if (!session) sendError ("No session attribute");
+										else {
+											var id = downDataEl.getElementsByTagName("window")[0].getAttribute("id");
+											window.open("http://" + window.location.host + "?session=" + session + (id ? ("&id=" + id):""));
+										}
+		
+							
 							} else	{
 								//create an object, exsept window, in a window as parent
 								var error = "", i = 0;
@@ -564,7 +613,7 @@ var DATA_IN_XML = true;
 								var windowNode = resEl.appendChild(createEmptyNode("window"));
 								var error = "";
 								for (var e in mCCDOMElement.childNodes ) {
-									
+									//TODO byClassName or html
 									if (mCCDOMElement.childNodes[e] instanceof Element && mCCDOMElement.childNodes[e].getAttribute("contains"))
 										error = getElementInfo (mCCDOMElement.childNodes[e], windowNode);
 								}
@@ -582,23 +631,6 @@ var DATA_IN_XML = true;
 			}
 		};
 		
-		function updateCanvas (configObj) {
-			mainCanvasContainer.updateCanvas(configObj);
-		}
-		
-		
-		function applyMap(newData) {
-			//Not in use
-			console.log("apply map");
-			var newMap = initJuliaMap(newData, mainShaderMap);
-			
-			mainShaderMap = newMap;
-			mainShaderMap.updateUniformsDeclaration();
-			mainCanvasContainer.rsCanvas.updateSphereMaterial(mainShaderMap, true);
-			curDataObject = parseJuliaData(newData);
-			getOutputDomElement(curDataObject, outputLine, 3);
-			
-		}
 		function reportStatus(message, type, data){
 			type = type || "log";
 			console.log(messageBlock, message, type, data);

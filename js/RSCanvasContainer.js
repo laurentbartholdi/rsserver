@@ -71,6 +71,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 			var cellWidth = this.canvasWidth;// + 12;
 			mainCanvas.setAttribute("width", this.canvasWidth.toString());
 			canvasCell.setAttribute("width", cellWidth.toString());
+			tbl.setAttribute("width", cellWidth.toString());
 		}
 		if (configObj.height) {
 			this.canvasHeight = configObj.height;
