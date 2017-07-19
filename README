@@ -51,7 +51,9 @@ Every window has one <head> and any quantity of <canvas>, <text> and <button> el
 
 <downdata> and <updata> must have an "object" attribute. (Except the "action" attribute of <downdata> value is "request". In this case the server sends an information about all windows of a given session. If "session" attribute is not present, the information about all open sessions is sent to tcp-server). The "object" attribute contains an ID of the given object (exsept if <downdata atcion="create"> and <updata status="created">, in this case "object" is the ID of the parent object). 
 
-Examples. 
+To set a layout for the objects on the page use <template> tag. It should be sent as a child of <downdata> whith action="create" attribute and contain valid html. Html tag that should contain functional elemenst (canvases, buttons or texts, created via the server) should have attributes class="wrapper" and content-id="[id of the contained object]". The content elements will be added to those tags and resulting html will be inserted to the page. A <template> tag may have "replace" attribute. If set to "true" the content of the <template> will replace existing content of the page, exsept page title, "show data" block and elements which do not have "wrappers" in the template (they will be placed after the template content, use <downdata action="remove"...> if you want to delete them), otherwise it will be added to the end of the existing content (befor "show data" block). 
+
+EXAMPLES
 
 Start of the session:
 Web->TCP <updata session='s1' status='created'><window id='w0'/></updata>
@@ -227,6 +229,31 @@ Request information
 TCP->Web <downdata action="request" session="s1"/>
 Web->TCP <updata status='info' session='s1' object='w0'><window><button name='button0' id='button0'/></window></updata>
 
+------------------------------------------------------------------------
+Changing layout
+-------------------------------------------------------------------------
+TCP->Web
+<downdata action="create" object="w0" session="s1">
+	<template replace="true" id="template1">
+		<table border="1">
+			<tr>
+				<td colspan="4" class="wrapper" content-id="canvas0"/>
+			</tr>
+			<tr>
+				<td class="wrapper" content-id="button0"/>
+				<td class="wrapper" content-id="button1"/>
+				<td class="wrapper" content-id="button3"/>
+				<td class="wrapper" content-id="button2"/>
+			</tr>
+		</table>
+	</template>
+</downdata>
+Web->TCP
+<updata status="created" session="s1" object="w0">
+	<template replace="true" id="template1">
+		[content of the template]
+	</template>
+</updata>
 
 --------------------------------------------------------------------------
 Actions on web UI
