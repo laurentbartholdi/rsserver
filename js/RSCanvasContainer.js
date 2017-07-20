@@ -63,6 +63,15 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		return this.configManager.getConfigValue(key);
 	}
 	
+	this.copyImage = function(event) {
+		console.log("copy image");
+		that.rsCanvas.somethingChanged = true;
+		that.rsCanvas.render();
+		var imgData = that.rsCanvas.canvas3d.toDataURL();
+		var imgTag = document.createElement("img");
+		imgTag.setAttribute("src", imgData);
+		domElement.appendChild(imgTag);
+	}
 	this.updateCanvas = function (configObj) {
 		console.log("updateCanvas", configObj);
 		
@@ -189,11 +198,16 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	td4.setAttribute("width", "20%");
 	td4.setAttribute("valign", "top");
 	
+	var td5 = document.createElement("td");
+	addButton(td5, "Copy image", this.copyImage);
+	
 	controlsRow.appendChild(td01);
 	controlsRow.appendChild(td4);
+	//controlsRow.appendChild(td5); //uncomment this line to test if getting bitmap data from canvas works.  
 	controlsRow.appendChild(td3);
 	controlsRow.appendChild(td2);
 	//controlsRow.appendChild(td4);
+	
 	
 	hideGLControls();
 	

@@ -1372,24 +1372,31 @@ RSCanvas.prototype = {
 		},
 		getSnapshotElement: function() {
 			var snapshotXMLObj = createEmptyNode("canvas");
-			snapshotXMLObj.appendChild(this.getRotationElement());
-			
-			snapshotXMLObj.appendChild(this.getTransformElement());
-
-			var ptsData = this.getSelectedPointsData();
-			for (var i = 0; i < ptsData.length; i++) {
-				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("point", ptsData[i]));
-			}
-			var drw = this.getDrawings();
-			for (var i = 0; i < drw.length; i++) {
-				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("line", drw[i]));
-			}
-			for (var i = 0; i < this.arcStyles.length; i++) {
-				snapshotXMLObj.appendChild(this.getSnapshotObjectElement("arc", this.arcStyles[i]));
-			}
-			if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
-				if (this.funcXML) {
-					snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
+			if (this.configManager.getConfigValue("reportImage")) {
+				this.somethingChanged = true;
+				this.render();
+				var imgData = this.canvas3d.toDataURL();
+				snapshotXMLObj.appendChild(document.createTextNode(imgData));
+			} else {
+				snapshotXMLObj.appendChild(this.getRotationElement());
+				
+				snapshotXMLObj.appendChild(this.getTransformElement());
+	
+				var ptsData = this.getSelectedPointsData();
+				for (var i = 0; i < ptsData.length; i++) {
+					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("point", ptsData[i]));
+				}
+				var drw = this.getDrawings();
+				for (var i = 0; i < drw.length; i++) {
+					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("line", drw[i]));
+				}
+				for (var i = 0; i < this.arcStyles.length; i++) {
+					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("arc", this.arcStyles[i]));
+				}
+				if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
+					if (this.funcXML) {
+						snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
+					}
 				}
 			}
 			return snapshotXMLObj;
