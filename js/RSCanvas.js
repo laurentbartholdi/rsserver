@@ -1540,10 +1540,10 @@ RSCanvas.prototype = {
 						if (!cnNode && !spNode) console.error("Data error. 'Point' node must contain either 'cn' or 'sp' child", pointsData[i]);
 						else if (cnNode) pts.push(Complex.fromXML(cnNode));
 						else pts.push(CU.localToComplex(this.converter.xmlSPToLocal(spNode)));
+						params[i] = {};
 						var label = pointsData[i].getElementsByTagName("label")[0];
 						if (label) {
 							var labelType = label.getAttribute("type");
-							params[i] = {};
 							if (labelType) {
 								switch (labelType) {
 								case "text" : {
