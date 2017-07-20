@@ -6,6 +6,7 @@ var DATA_IN_XML = true;
 		var messageBlock, dataBlock, showDataBtn, hideDataBtn, logView, pageTitle; //Permanent page elements
 		var mCCDOMElement; //The dynamic html-block, to add elements on the commands from the server 
 		var pageDataXML; //XML element to store data about the page structure and send to server by request.
+		var templates = [];
 		 
 		function pageInit() {
 			//Executes when the html-page is loaded
@@ -139,7 +140,6 @@ var DATA_IN_XML = true;
 		function onCanvasUpdated(event) {
 			
 			var updata = createEmptyNode("updata");
-			console.log("selected points event catched", event, event.target);
 			if (event.detail) {
 				updata.setAttribute("status", event.detail.action || "updated");
 				updata.setAttribute("object", event.detail.object);
@@ -190,7 +190,6 @@ var DATA_IN_XML = true;
 		};
 		
 		function getElementInfo (parentContainer, resEl) {
-			//TODO add position attribute
 			var err = "";
 			var type = parentContainer.getAttribute("contains");
 			if (!type) err = "Invalid element type";
@@ -344,7 +343,9 @@ var DATA_IN_XML = true;
 						containers.push(containersLive[i]);
 					if (replace) {
 						while (mCCDOMElement.hasChildNodes()) mCCDOMElement.removeChild(mCCDOMElement.firstChild);
+						templates = [];
 					}
+					templates.push(dataNode);
 					while (butWhy.hasChildNodes()) {
 						var item = butWhy.firstChild;
 						butWhy.removeChild(item);
@@ -613,11 +614,15 @@ var DATA_IN_XML = true;
 								var windowNode = resEl.appendChild(createEmptyNode("window"));
 								var error = "";
 								var containers = mCCDOMElement.getElementsByClassName("element-container");
-								for (var e in containers ) {
-									//TODO byClassName or html
-									if (containers[e] instanceof Element)
-										error = getElementInfo (containers[e], windowNode);
+								for (var j = 0; j < containers.length; j++ ) {
+									console.log("container", j, containers[j]);
+									if (containers[j] instanceof Element)
+										error = getElementInfo (containers[j], windowNode);
 								}
+								for (var i = 0; i < templates.length; i++){
+									console.log("template", i, templates[i]);
+									windowNode.appendChild(templates[i]);
+							 }
 								if (error) sendError(error)
 								else {
 									resEl.setAttribute("status", "info");
