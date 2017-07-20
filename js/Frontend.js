@@ -99,29 +99,41 @@ var DATA_IN_XML = true;
 			}
 			attributesToObject(["width", "height", "color", "geometry", "name"], dataElement, canvasData); 
 			canvasData.bkgColor = canvasData.color||"#333333"; //backward compatibility
-			var rscc = new RSCanvasContainer(
-					pageElement, 
-					surfaceData, 
-					canvasData, 
-					dataElement.getAttribute("id") + "_internal");
-			var outputLine = document.createElement('div'); //The output of the function formula
-			outputLine.setAttribute("class", "output-line");
-			outputLine.setAttribute("id", dataElement.getAttribute("id") + "_output");
-			pageElement.appendChild(outputLine);
-			pageElement.outputLine = outputLine;
-			if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
-				pageElement.rscc = rscc;
-				rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
-				rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasUpdated);
-				rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasUpdated);
-				rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasUpdated);
-				rscc.rsCanvas.canvas3d.addEventListener("rotationChanged", onCanvasUpdated);
-				rscc.rsCanvas.canvas3d.addEventListener("transformChanged", onCanvasUpdated);
-			}
-			else return "Error creating canvas";
-			
-			if (dataElement.hasChildNodes) {
-				populateCanvas(pageElement, dataElement, dataElement.getAttribute("id"));
+			canvasData.geometry = canvasData.geometry || "sphere";
+			if (canvasData.geometry == "sphere") {
+				var rscc = new RSCanvasContainer(
+						pageElement, 
+						surfaceData, 
+						canvasData, 
+						dataElement.getAttribute("id") + "_internal");
+				var outputLine = document.createElement('div'); //The output of the function formula
+				outputLine.setAttribute("class", "output-line");
+				outputLine.setAttribute("id", dataElement.getAttribute("id") + "_output");
+				pageElement.appendChild(outputLine);
+				pageElement.outputLine = outputLine;
+				if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
+					pageElement.rscc = rscc;
+					rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
+					rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasUpdated);
+					rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasUpdated);
+					rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasUpdated);
+					rscc.rsCanvas.canvas3d.addEventListener("rotationChanged", onCanvasUpdated);
+					rscc.rsCanvas.canvas3d.addEventListener("transformChanged", onCanvasUpdated);
+				}
+				else return "Error creating canvas";
+				
+				if (dataElement.hasChildNodes) {
+					populateCanvas(pageElement, dataElement, dataElement.getAttribute("id"));
+				}
+			} else {
+				pageElement.rscc = document.createElement("div");
+				var img = document.createElement("img");
+				if (canvasData.width) img.setAttribute("width", canvasData.width);
+				if (canvasData.height) img.setAttribute("height", canvasData.width);
+				pageElement.rscc.img = img;
+				pageElement.appendChild(img);
+				var bmp = dataElement.getElementsByTagName("bitmap")[0];
+				if (bmp && bmp.hasChildNodes) img.setAttribute("src", bmp.firstChild.nodeValue);
 			}
 			
 			return ""; //no errors
@@ -163,25 +175,43 @@ var DATA_IN_XML = true;
 		
 		function populateCanvas(container, dataElement, cId){
 			var err = "";
-			if (container.getAttribute("contains") == "canvas" && container.rscc && container.rscc.rsCanvas){
-				if (dataElement.getElementsByTagName("function").length > 0) {
-					var dataStructure = xmlToStrings(dataElement); //in DataParser.js
-					var dataObject = getCanvasDataFromXML(dataElement);
-					var surfaceData = initJuliaMap(dataStructure, /*Old map?*/{},true);
-					surfaceData.updateUniformsDeclaration();
-					container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
-					getOutputDomElement(dataObject, container.outputLine, 3);
-				}
-				var configElements = dataElement.getElementsByTagName("config");
-				if (configElements.length > 0) {
-					var cfg = {};
-					for (var i = 0; i < configElements.length; i++) {
-						ConfigManager.parseXMLNode(configElements[i], cfg);
+			if (container.getAttribute("contains") == "canvas" && container.rscc){
+				if (container.rscc.rsCanvas){
+					if (dataElement.getElementsByTagName("function").length > 0) {
+						var dataStructure = xmlToStrings(dataElement); //in DataParser.js
+						var dataObject = getCanvasDataFromXML(dataElement);
+						var surfaceData = initJuliaMap(dataStructure, /*Old map?*/{},true);
+						surfaceData.updateUniformsDeclaration();
+						container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
+						getOutputDomElement(dataObject, container.outputLine, 3);
 					}
-					container.rscc.updateCanvas(cfg);
+					var configElements = dataElement.getElementsByTagName("config");
+					if (configElements.length > 0) {
+						var cfg = {};
+						for (var i = 0; i < configElements.length; i++) {
+							ConfigManager.parseXMLNode(configElements[i], cfg);
+						}
+						container.rscc.updateCanvas(cfg);
+					}
+					container.rscc.rsCanvas.parseData(dataElement);
+	
+				} else if(container.rscc.img) {
+					var img = container.rscc.img;
+					if (dataElement.getElementsByTagName("bitmap").length > 0 &&
+							dataElement.getElementsByTagName("bitmap")[0].hasChildNodes()) {
+						img.setAttribute("src", dataElement.getElementsByTagName("bitmap")[0].firstChild.nodeValue)
+					}
+					var configs = dataElement.getElementsByTagName("config");
+					for (var i = 0; i < configs.length; i++) {
+						if (configs[i].getAttribute("key") == "width")
+							img.setAttribute("width", configs[i].getAttribute("value"));
+						if (configs[i].getAttribute("key") == "height")
+							img.setAttribute("height", configs[i].getAttribute("value"));
+							
+					}
+				} else {
+					err = "Invalid canvas container";
 				}
-				container.rscc.rsCanvas.parseData(dataElement);
-
 			} else {
 				err = "Invalid canvas container";
 			}
@@ -199,6 +229,16 @@ var DATA_IN_XML = true;
 				if (type == "canvas") {
 					if (parentContainer.rscc && parentContainer.rscc.rsCanvas && typeof parentContainer.rscc.rsCanvas.getSnapshotElement === "function") {
 						resNode = parentContainer.rscc.rsCanvas.getSnapshotElement();
+					} else if (parentContainer.rscc && parentContainer.rscc.img) {
+						var img = parentContainer.rscc.img;
+						resNode = createEmptyNode("canvas");
+						resNode.setAttribute("geometry", "plane");
+						var bmp = createEmptyNode("bitmap");
+						bmp.appendChild(document.createTextNode(img.getAttribute("src")));
+						resNode.appendChild(bmp);
+						if (img.getAttribute("width")) resNode.setAttribute("width", img.getAttribute("width"));
+						if (img.getAttribute("height")) resNode.setAttribute("height", img.getAttribute("height"));
+						
 					} else {
 						err = "Error getting canvas information";
 					}
@@ -460,17 +500,21 @@ var DATA_IN_XML = true;
 						if (action == "create" && parentContainer.getAttribute("contains") == "canvas") {
 							var error = populateCanvas(parentContainer, downDataEl, objID);
 							if (!error) {
-								var news = parentContainer.rscc.rsCanvas.readNewElements();
-								if (news.length > 0) {
-									resEl.setAttribute("status", "created");
-									resEl.setAttribute("object", objID);
-									
-									for (var ii = 0; ii< news.length; ii++)
-										resEl.appendChild(news[ii]);
-									sendData({data:xmlSerializer.serializeToString(resEl)});
-								} else {
-									sendData({data:"<updata status='updated' object='" + objID + "'/>"});
-								}
+								if (parentContainer.rscc && 
+										parentContainer.rscc instanceof RSCanvasContainer && 
+										parentContainer.rscc.rsCanvas) {
+									var news = parentContainer.rscc.rsCanvas.readNewElements();
+									if (news.length > 0) {
+										resEl.setAttribute("status", "created");
+										resEl.setAttribute("object", objID);
+										
+										for (var ii = 0; ii< news.length; ii++)
+											resEl.appendChild(news[ii]);
+										sendData({data:xmlSerializer.serializeToString(resEl)});
+									} else {
+										sendData({data:"<updata status='updated' object='" + objID + "'/>"}); //no new objects found
+									}
+								} else sendData({data:"<updata status='updated' object='" + objID + "'/>"}); //not Riemann Sphere canvas
 							}
 							else {sendError(error);}
 	
