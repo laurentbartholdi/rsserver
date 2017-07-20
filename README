@@ -53,4 +53,6 @@ Every window has one <head> and any quantity of <canvas>, <text> and <button> el
 
 To set a layout for the objects on the page use <template> tag. It should be sent as a child of <downdata> whith action="create" attribute and contain valid html. Html tag that should contain functional elemenst (canvases, buttons or texts, created via the server) should have attributes class="wrapper" and content-id="[id of the contained object]". The content elements will be added to those tags and resulting html will be inserted to the page. A <template> tag may have "replace" attribute. If set to "true" the content of the <template> will replace existing content of the page, exsept page title, "show data" block and elements which do not have "wrappers" in the template (they will be placed after the template content, use <downdata action="remove"...> if you want to delete them), otherwise it will be added to the end of the existing content (befor "show data" block). 
 
+If an html-templates are applied to a window, in reply to "request" action the objects of the window are not integrated in html, they are sent as a list, applied templates are sent among them (see example). 
+
 
