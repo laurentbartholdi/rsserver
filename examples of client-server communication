@@ -239,6 +239,21 @@ Web->TCP
 	</window>
 </updata>
 
+Getting image data of a canvas
+TCP->Web
+<downdata action="populate" object="canvas0" session="s1">
+	<config key="reportImage" value="true"/>
+</downdata>
+Web->TCP
+<updata session="s1" status="updated" object="canvas0"/>
+TCP->Web
+<downdata action="request" object="canvas0" session="s1"/>
+Web->TCP
+<updata status="info" object="canvas0">
+	<canvas id="canvas0">
+		data:image/png;base64,....(image data in Data URL format)
+	</canvas>
+</updata>
 ------------------------------------------------------------------------
 Changing layout
 -------------------------------------------------------------------------
