@@ -1,0 +1,326 @@
+------------------------------
+Start of the session:
+--------------------------------
+Web->TCP <updata session='s1' status='created'><window id='w0'/></updata>
+
+
+Setting title of the window
+TCP->Web
+<downdata action="create" object="w0" session="s1"><head>New title of the window</head></downdata>
+Web->TCP
+<updata status='created' session='s1' object='w0'><head id='head0'>New title of the window</head></updata>
+
+-----------------------------------
+Creating an object in a window
+-----------------------------------
+
+TCP->Web <downdata session='s1' obejct='w0' action='create'><button/></downdata>
+Web->TCP <updata session="s1" object="w0" status="created"><button id="button0"/></updata>
+Id of the button is generated automatically.
+
+TCP->Web
+<downdata action="create" object="w0" session="s1"><text>New text line</text></downdata>
+Web->TCP
+<updata status='created' session='s1' object='w0'><text id='text0'>New text line</text></updata>
+
+
+Creating and populating a canvas
+TCP->Web <downdata session='s1' obejct='w0' action='create'><canvas/></downdata>
+Web->TCP <updata session="s1" object="w0" status="created"><canvas id="canvas0"/></updata>
+
+TCP->Web <downdata session="s1" object="canvas0" action="populate">
+		<function type="newton" degree="3"/>
+		<point movable="true"><cn re="1", im="0"/></point>
+		<config key="width" value="1000"/>
+		<transform><cn re="0", im="0"/><cn re="1" im="0"/><cn re="1" im="0"/><cn re="0" im="0"/></transform>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0">
+	<canvas id="canvas0">
+		<rotation x="2" y="0" z="0.7" order="XYZ"/>
+		<transform>
+			<cn re="0" im="0"/>
+			<cn re="1" im="0" r="1"/>
+			<cn re="1" im="0" r="1"/>
+			<cn re="0" im="0"/>
+		</transform>
+		<point id="canvas0UIpoint0" canvas="canvas0" movable="true">
+			<cn re="1.0000000000000002" im="0" r="1.0000000000000002"/>
+		</point>
+		<function degree="3">
+			<numer>
+				<cn re="1" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="2" im="0"/>
+			</numer>
+			<denom>
+				<cn re="0" im="0"/>
+				<cn re="0" im="0"/>
+				<cn re="3" im="0"/>
+				<cn re="0" im="0"/>
+			</denom>
+			<cycle length="1">
+				<cn re="1" im="0"/>
+			</cycle>
+			<cycle length="1">
+				<cn re="-0.4999999999999998" im="0.8660254037844387"/>
+			</cycle>
+			<cycle length="1">
+				<cn re="-0.5000000000000004" im="-0.8660254037844385"/>
+			</cycle>
+		</function>
+	</canvas>
+</updata>
+
+--------------------------------------
+Adding some objects to canvas
+--------------------------------------
+TCP->Web
+"<downdata action="populate" session="s1" object="canvas0">
+	<point color="#ff6666" movable="false"><cn re="0" im="1"/></point>
+	<point color="#6666ff" movable="false"><cn re="1" im="0"/></point>
+	<point color="#66ff66" movable="false"><cn re="1" im="1"/></point>
+	<arc type="transformation" color="#6666ff"><cn re="0" im="0"/><cn re="1" im="0"/><cn re="1" im="1"/><cn re="0" im="-1"/></arc>
+</downdata>"
+Web->TCP
+<updata session="s1" status="created" object="canvas0">
+	<point id="canvas0UIpoint1" canvas="canvas0" color="#ff6666" movable="false"><cn re="0" im="1" r="1" t="1.5707963267948966"/></point>
+	<point id="canvas0UIpoint2" canvas="canvas0" color="#6666ff" movable="false"><cn re="1" im="0" r="1"/></point>
+	<point id="canvas0UIpoint3" canvas="canvas0" color="#66ff66" movable="false"><cn re="1" im="1" r="1.4142135623730951" t="0.7853981633974482"/></point>
+</updata>
+<updata session="s1" status="created" object="canvas0">
+	<arc id="canvas0UIarc4" canvas="canvas0" color="#6666ff" width="2">
+		<sp x="0" y="0" z="-1"/>
+		<sp x="0.6666666666666669" y="-0.3333333333333335" z="-0.6666666666666666"/>
+		<sp x="1" y="0" z="0"/>
+	</arc>
+</updata>
+<updata session="s1" status="updated" object="canvas0"/>
+
+
+Another way to add objects to canvas (action="create" instead of "populate")
+TCP->Web <downdata action="create" object="canvas0" session="s1"><point><cn re="0.5" im="0.5"/></point></downdata>
+<updata status='created' object='canvas0' session='s1'>
+	<point id='point0' canvas='canvas0'><cn re='0.5' im='0.5' r='0.7071067811865475'/></point>
+</updata>
+<updata status='updated' object='canvas0' session='s1'/>
+
+TCP->Web
+<downdata action="create" object="canvas0" session="s1">
+	<arc type="points" id="arc0"><cn re="1" im="0.5"/><cn re="0.5" im="0.5"/><cn re="0" im="0.5"/></arc>
+</downdata>
+Web->TCP 
+<updata status='created' object='canvas0' session='s1'>
+	<arc id='arc0' canvas='canvas0' color='#333399' width='2'>
+		<sp x='0.888888888888889' y='-0.11111111111111112' z='-0.4444444444444445'/>
+		<sp x='0.5536365323582664' y='0.30450009279704654' z='-0.7750911453015731'/>
+		<sp x='4.898587196589413e-17' y='0.6000000000000001' z='-0.8'/>
+	</arc>
+</updata>
+<updata status='updated' object='canvas0' session='s1'/>
+
+TCP->Web 
+<downdata action="create" object="canvas0" session="s1">
+	<line>
+		<cn re="1" im="0.1"/><cn re="1.1" im="0.2"/><cn re="1.2" im="0.2"/><cn re="1.3" im="0.1"/><cn re="1.4" im="0"/>
+	</line>
+</downdata>
+Web->TCP 
+<updata status='created' object='canvas0' session='s1'>
+	<line id='line0' canvas='canvas0'>
+		<cn re='1' im='0.1'/><cn re='1.1' im='0.2'/><cn re='1.2' im='0.2'/><cn re='1.3' im='0.1'/><cn re='1.4' im='0'/>
+	</line>
+</updata>
+<updata status='updated' object='canvas0' session='s1'/>
+
+------------------------------
+Update a point or arc.
+----------------------------
+Change appearance and position of a point
+TCP->Web
+<downdata action="populate" object="canvas0UIpoint2" session="s1">
+	<config key="color" value="#ff6600"/>
+	<config key="radius" value=".4"/>
+	<sp x="0" y="1" z="0"/>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0" session="s1">
+	<point id="canvas0UIpoint2" canvas="canvas0" color="#66ff66" movable="false">
+		<cn re="0" im="0"/>
+		<label type="number"/>
+	</point>
+</updata>
+
+Change appearance of an arc
+TCP->Web
+<downdata action="populate" object="canvas0UIarc3" session="s1">
+	<config key="color" value="#ff6600"/>
+	<config key="width" value="4"/>
+</downdata>
+Web->TCP
+<updata status="updated" object="canvas0" session="s1">
+	<arc color="#ff6600" width="4"/>
+</updata>
+
+
+Remove an object
+TCP->Web <downdata action="remove" object="line0" session="s1"></downdata>
+Web->TCP <updata status='removed' object='line0' session='s1'/>
+
+TCP->Web <downdata session="s1" action="remove" object="canvas0"/>
+Web->TCP <updata session='s1' status='removed' object='canvas0'/>
+--------------------------------------------
+Request information
+----------------------------------------------
+All windows in the session (there two windows with one button each)
+TCP->Web <downdata action="request" session="s1"/>
+Web->TCP <updata status='info' session='s1' object='w0'><window><button name='button0' id='button0'/></window></updata>
+Web->TCP <updata status='info' session='s1' object='w1'><window><button name='button1' id='button1'/></window></updata>
+
+Request about a window with id w0
+TCP->Web <downdata action="request" session="s1" object="w0"/>
+Web->TCP
+<updata status="info" session="s1">
+	<window>
+		<button name="button3" id="button3"/>
+		<canvas id="canvas0">
+			<rotation x="2.21" y="0" z="0.68" order="XYZ"/>
+			<transform>
+				<cn re="1" im="0" r="1" t="6.283185307179586"/>
+				<cn re="0" im="0" t="6.283185307179586"/>
+				<cn re="0" im="0" t="6.283185307179586"/>
+				<cn re="1" im="0" r="1" t="6.283185307179586"/>
+			</transform>
+			<function degree="3">
+				<numer>
+					<cn re="1" im="0"/>
+					<cn re="0" im="0"/>
+					<cn re="0" im="0"/>
+					<cn re="2" im="0"/>
+				</numer>
+				<denom>
+					<cn re="0" im="0"/>
+					<cn re="0" im="0"/>
+					<cn re="3" im="0"/>
+					<cn re="0" im="0"/>
+				</denom>
+				<cycle length="1">
+					<cn re="1" im="0"/>
+				</cycle>
+				<cycle length="1">
+					<cn re="-0.4999999999999998" im="0.8660254037844387"/>
+				</cycle>
+				<cycle length="1">
+					<cn re="-0.5000000000000004" im="-0.8660254037844385"/>
+				</cycle>
+			</function>
+		</canvas>
+		<button name="button0" id="button0"/>
+		<button name="button1" id="button1"/>
+		<text id="text0">Text line</text>
+		<button name="Button name" id="button2"/>
+		<template replace="true" id="template2">
+			<style>button {color:blue;}</style>
+		</template>
+		<template replace="false" id="template3">
+			<table border="1">
+				<tr>
+					<td colspan="4" class="wrapper" content-id="canvas0"/>
+				</tr>
+				<tr>
+					<td class="wrapper" content-id="button0"/>
+					<td class="wrapper" content-id="button1"/>
+					<td class="wrapper" content-id="text0"/>
+					<td class="wrapper" content-id="button2"/>
+				</tr>
+			</table>
+		</template>
+	</window>
+</updata>
+
+------------------------------------------------------------------------
+Changing layout
+-------------------------------------------------------------------------
+TCP->Web
+<downdata action="create" object="w0" session="s1">
+	<template replace="true" id="template1">
+		<table border="1">
+			<tr>
+				<td colspan="4" class="wrapper" content-id="canvas0"/>
+			</tr>
+			<tr>
+				<td class="wrapper" content-id="button0"/>
+				<td class="wrapper" content-id="button1"/>
+				<td class="wrapper" content-id="button3"/>
+				<td class="wrapper" content-id="button2"/>
+			</tr>
+		</table>
+	</template>
+</downdata>
+Web->TCP
+<updata status="created" session="s1" object="w0">
+	<template replace="true" id="template1">
+		[content of the template]
+	</template>
+</updata>
+
+--------------------------------------------------------------------------
+Actions on web UI
+----------------------------------------------------------------------------
+
+User clicks the button 'button0'
+Web->TCP <updata session='s1' status='button-click' object='button0'/>
+
+User has added a point: 
+Web->TCP
+<updata session="s1" status="created" object="canvas0">
+	<point id="canvas0UIpoint1" canvas="canvas0">
+		<cn re="1.3302203016807654" im="-1.3189376605521121" r="1.8732545484867626"/>
+	</point>
+</updata>
+
+User has moved a point: 
+Web->TCP 
+<updata session="s1" status="updated" object="canvas0">
+	<point id="canvas0UIpoint0" canvas="canvas0" movable="true">
+		<cn re="1.2589972606891076" im="-0.17267385291220938" r="1.2707833654491327"/>
+	</point>
+</updata>
+
+User has removed a point:
+Web->TCP
+<updata session="s1" status="removed" object="canvas0UIpoint0"/>
+
+User has drawn a line
+Web->TCP
+<updata session="s1" status="created" object="canvas0UIline0">
+	<line id="canvas0UIline0" canvas="canvas0">
+		<cn re="0.16478563291654094" im="0.3004821811601285" r="0.34270081121942686" t="1.069179270233213"/>
+		[all points of the line]
+	</line>
+</updata>
+
+User has removed a line ("Clear drawings" button)
+Web->TCP
+<updata session="s1" status="removed" object="canvas0UIline0"/>
+<updata session="s1" status="removed" object="canvas0UIline1"/>
+(Ack is sent about each line separately)
+
+User has rotated the sphere
+Web->TCP 
+<updata session="s1" status="updated" object="canvas0">
+	<rotation x="1.8168817964372586" y="-0.34613175084056025" z="0.09053054958506236" order="XYZ"/>
+</updata>
+
+User has transformed the sphere
+Web->TCP
+<updata session="s1" status="updated" object="canvas0">
+	<transform>
+		<cn re="0.5523225030131864" im="-0.6112080888938083"/>
+		<cn re="0.23396703696778925" im="0.3708035578640365" r="0.438447092489065"/>
+		<cn re="-0.38253997110311105" im="-0.21424057370289518" r="0.438447092489065"/>
+		<cn re="1.5153790280031172" im="-1.6260564820133163"/>
+	</transform>
+</updata>
+-----------------------------------------------------------------------------------------------------------------
