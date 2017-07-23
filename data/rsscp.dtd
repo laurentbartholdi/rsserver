@@ -7,19 +7,18 @@
 <!ELEMENT head (#PCDATA)>
 
 <!ELEMENT text (#PCDATA)>
-<!ATTLIST text
-	  position CDATA #IMPLIED>
+
 
 <!ELEMENT canvas ((function|bitmap)?, point*, arc*, button*, config*)>
 <!ATTLIST canvas 
 	  geometry (sphere|plane) "sphere" 
+	  static (true|false) "false"
 	  id ID #REQUIRED
 	  name CDATA #IMPLIED
 	  width CDATA "800"
 	  height CDATA "600"
 	  color CDATA #IMPLIED
-	  window IDREF #IMPLIED
-	  position CDATA #IMPLIED>
+	  window IDREF #IMPLIED>
 
 <!ELEMENT function (numer, denom, cycle+, options*)>
 <!ATTLIST function
@@ -91,7 +90,6 @@
 <!ATTLIST downdata
 	  action (create|populate|remove|request) "create"
 	  object IDREF #REQUIRED <!--for "create" action this is a parent object (window or canvas), for "remove", "populate" or "request" - requested object--> 
-	  position #IMPLIED
 	  session IDREF #REQUIRED>
 	  
   <!ELEMENT template PCDATA> <!--should contain valid html-->
