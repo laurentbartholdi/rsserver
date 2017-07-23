@@ -1,4 +1,4 @@
-//Copyright (c) Anna Alekseeva 2013-2016
+//Copyright (c) Anna Alekseeva 2013-2017
 //TODO ВСЁ ПЕРЕДЕЛАТЬ!!!
 var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	this.canvasData = canvasData || {};

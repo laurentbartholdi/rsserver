@@ -1,18 +1,13 @@
-//Copyright (c) Anna Alekseeva 2013-2016
+//Copyright (c) Anna Alekseeva 2013-2017
 
 var RSCanvas = function(canvas, materialData, canvasData) {
 	
 	//------------------privileged methods---------------------------------
 	//------------------event handlers-------------------------------------
-	
+	InteractiveCanvas.call(this, canvas, materialData, canvasData);
 	this.onCanvasResize = function () {
-		this.camera.aspect = this.canvas3d.width / this.canvas3d.height;
 		this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
-		this.camera.updateProjectionMatrix();
-		this.renderer.setSize( this.canvas3d.width, this.canvas3d.height );
-		this.updateLegendPosition();
-		this.renderer.render();
-
+		InteractiveCanvas.prototype.onCanvasResize.call(this);
 	};
     this.handleMouseDown = function(event) {
         mouseDown = true;
@@ -243,7 +238,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
 		if (this.transformUpdated) {
 			if (this.sphere.material instanceof THREE.ShaderMaterial){
-				updateComplexAttribute(this.sphere.geometry, 
+				this.updateComplexAttribute(this.sphere.geometry, 
 						this.sphere.material.complexShaderMap);
 			} else if (this.sphere.material.complexTextureImage) {
 				
@@ -264,13 +259,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			this.somethingChanged = true;
 		}
 
-
-		if (this.somethingChanged) {
-			this.renderer.render(this.scene, this.camera);
-			this.somethingChanged = false;
-			this.labelManager.checkLabels(true);
-			
-		}
+		InteractiveCanvas.prototype.render.call(this);
 
 		
 	}
@@ -770,7 +759,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			};
 		}
 	}
-	this.clearDrawing = function(dontClearData) {
+	this.clearDrawing = function(dontClearData) {//seems not in use any more
 		if (this.sphere.material.map) {
 			drawTexture(textureCanvas.getContext("2d"), 2*textureSize, textureSize);
 			this.sphere.material.map.needsUpdate = true;
@@ -1032,162 +1021,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		this.sphere.material.map.needsUpdate = true;
 		
 	}
-	//-----------------shader material----------------------------------
-	this.initShaderMaterial = function(geom, shaderMap) {
-		if (!shaderMap) shaderMap = new ComplexShaderMap();
-		this.curShaderMap = shaderMap;
-		updateComplexAttribute(geom, shaderMap);
-		var uniforms = THREE.UniformsUtils.merge ([
-			THREE.UniformsLib[ "lights" ],
-		{
-			diffuse: {type: "c", value: new THREE.Color( 0xffffff )}, 
-			ambient: {type: "c", value: new THREE.Color( 0xffffff )},
-			emissive: {type: "c", value: new THREE.Color( 0x000000 )}
-				},
-				shaderMap.uniforms]);
-
-		                                           
-		var shaderMaterial = new THREE.ShaderMaterial({
-			  uniforms:uniforms,
-			  vertexShader: vertexShaderString,
-			  fragmentShader: this.getFragmentShaderString(shaderMap),
-			  lights: true
-			  });
-		shaderMaterial.complexShaderMap = shaderMap;
-		return shaderMaterial;
-	}
-	var vertexShaderString = [
-	                      	"attribute vec2 c;",
-	                      	"attribute float scale;",
-	                      	"attribute vec2 w;",
-	                      	"attribute vec2 z;",
-	                      	"varying vec3 vPosition;",
-	                      	"varying vec3 vLightFront;",
-	                      	"varying vec2 vC;",
-	                      	"varying float vScale;",
-	                      	"varying vec2 vZ;",
-	                      	"varying vec2 vW;",
-	                      	"uniform vec3 diffuse;",
-	                      	"uniform vec3 ambient;",
-	                      	"uniform vec3 emissive;",
-	                      	"uniform vec3 ambientLightColor;",
-	                      	"#if NUM_DIR_LIGHTS > 0",
-	                        "struct DirectionalLight {",
-	                         "   vec3 direction;",
-	                         "   vec3 color;",
-	                         "   int shadow;",
-	                         "   float shadowBias;",
-	                         "   float shadowRadius;",
-	                         "   vec2 shadowMapSize;",
-	                         "};",
-	                         "uniform DirectionalLight directionalLights[ NUM_DIR_LIGHTS ];",
-	                      	"#endif",
-
-	                      	"void main() {",
-	                      		"vec3 transformedNormal = normalMatrix * normal;",
-	                      		"vLightFront = vec3( 0.0 );",
-	                      		"#if (NUM_DIR_LIGHTS > 0)",
-	                      			"for( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {",
-	                      		
-	                      				"vec4 lDirection = viewMatrix * vec4( directionalLights[ i ].direction, 0.0 );",
-	                      				"vec3 dirVector = normalize( lDirection.xyz );",
-	                      		
-	                      				"float dotProduct = dot( transformedNormal, dirVector );",
-	                      				"vec3 directionalLightWeighting = vec3( max( dotProduct, 0.0 ) );",
-	                      		
-	                      		
-	                      				"vLightFront += directionalLights[ i ].color * directionalLightWeighting;",
-	                      			"}",
-	                      		
-	                      		"#endif",
-	                      		"vLightFront = vLightFront * diffuse + ambient * ambientLightColor + emissive;",
-	                      		"vC =c;",
-	                      		"vScale = scale;",
-	                      		"vZ = z;",
-	                      		"vW = w;",
-	                      		"gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);",
-	                      	 "}"
-	                      ].join("\n");
-
-
-
-	                      this.getFragmentShaderString = function (complexShaderMap) {
-	                      	if (!complexShaderMap) {
-	                      		complexShaderMap = new ComplexShaderMap();
-	                      	}
-	                      	var fragmentShaderString = [
-	                      	                           	complexShaderMap.uniformsDeclaration,
-	                      	                           	"varying vec3 vLightFront;",
-
-	                      	                            //"varying vec3 vPosition;",
-	                      	                            "varying vec2 vC;",
-	                      	                            "varying float vScale;",
-	                      	                            "varying vec2 vZ;",
-	                      	                            "varying vec2 vW;",
-	                      	                            
-	                      	                            complexShaderMap.methods ? complexShaderMap.methods : "",
-
-	                      	                            "void main() {",
-	                      	                            "float r, g, b;",
-	                      	                            "vec2 c = vC;",
-	                      	                            "vec2 z = vZ;",
-	                      	                            "vec2 w = vW;",
-	                      	                            "float scale = vScale;",
-	                      	                            complexShaderMap.code,
-	                      	                            
-	                      	                            "gl_FragColor = vec4(r, g, b, 1.0);",
-	                      	                           	"gl_FragColor.xyz *= vLightFront;",
-	                      	                        	"}"
-	                      	                        ].join("\n");
-	                      	return fragmentShaderString;
-	                      };
-	                      function updateComplexAttribute(geom, shaderMap){
-	                    		var posArr = geom.getAttribute("position");
-	                    		var numVerticies = posArr.count;
-	                    		if (!geom.getAttribute("c")) {
-	                    			geom.addAttribute("c", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
-	                    			geom.addAttribute("scale", new THREE.BufferAttribute(new Float32Array(numVerticies), 1, false ));
-	                    			geom.addAttribute("z", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
-	                    			geom.addAttribute("w", new THREE.BufferAttribute(new Float32Array(2*numVerticies), 2, false ));
-	                    		}
-	                    		var attr = geom.attributes;
-	                    		
-	                    		var curPos = new THREE.Vector3();
-	                    		for (var i = 0; i < numVerticies; i++){
-	                    			curPos.set(posArr.getX(i), posArr.getY(i), posArr.getZ(i));
-	                    			var c0 = CU.localToComplex(curPos);
-	                    			var c, scale;
-	                    			if (that.currentTransform) {
-	                    				c = that.currentTransform.apply(c0);
-	                    				scale = that.currentTransform.scale(c);
-	                    			} else {
-	                    				c = c0; 
-	                    				scale = 1.;
-	                    			}
-	                    			var w = new Complex(1/(c.r() + 1), 0);
-	                    			var z = c.mult(w);
-	                    			attr.scale.setX(i, scale);
-	                    			if ( shaderMap && shaderMap.polar ) {
-	                    				attr.c.setXY(i, c.r(), c.t());
-	                    				attr.z.setXY(i, z.r(), z.t());
-	                    				attr.w.setXY(i, w.r(), w.t());
-	                    			} else {
-	                    				attr.c.setXY(i, c.re, c.i);
-	                    				attr.z.setXY(i, z.re, z.i);
-	                    				attr.w.setXY(i, w.re, w.i);
-	                    			}
-	                    		}
-	                    		attr.c.needsUpdate = true;
-	                    		attr.scale.needsUpdate = true;
-	                    		attr.z.needsUpdate = true;
-	                    		attr.w.needsUpdate = true;
-	                    		return attr;
-	                    	}
-
-
-	                    	var sphereShaderAttributes = {};
-
-	//---------------end shader material--------------------------------
 	
 	//------------end private methods-----------------------------------
 
@@ -1262,738 +1095,489 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 //static vars
 RSCanvas.SPHERE_RADIUS = 20;
 RSCanvas.CAMERA_DISTANCE = 60;
-RSCanvas.CAMERA_FOV = 45;
-
-RSCanvas.prototype = {
-		//--public functions----------------
-		constructor: RSCanvas,
-		init: function(canvas, materialData, canvasData) {
-			this.canvas3d = canvas;
-			
-			var lblm = new RSCanvas.LabelManager(this);
-			
-			this.canvasData = canvasData || {};
-			this.configManager = this.canvasData.configManager;
-			this.bkgColor = this.configManager.getConfigValue("bkgColor") || new THREE.Color(0x333333);
-			
-			
-			//var sphGeom = new THREE.SphereGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
-			var sphGeom = new THREE.SphereBufferGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
-
-			var sphMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); 
-			if (materialData) { 
-				if (materialData instanceof ComplexShaderMap) {
-					console.log("ShaderMap created", materialData)
-					sphMaterial = this.initShaderMaterial(sphGeom, materialData);
-				} else if (materialData instanceof TextureImage){
-					console.log("TextureImage", materialData);
-					sphMaterial = new THREE.MeshLambertMaterial({
-						map : new THREE.Texture(materialData.textureCanvas)
-						//map : new THREE.Texture(document.getElementById("test-canvas"))
-					});
-					sphMaterial.complexTextureImage = materialData;
-					sphMaterial.needsUpdate = true;
-					sphMaterial.map.needsUpdate = true;
-				} else sphMaterial = this.initShaderMaterial(sphGeom);
-			} else {
-				sphMaterial = this.initShaderMaterial(sphGeom);
-			}
-			this.sphere = new THREE.Mesh( sphGeom, sphMaterial );
-			this.sphere.dynamic = true;
-
-			this.scene = new THREE.Scene();
-			this.camera = new THREE.PerspectiveCamera( RSCanvas.CAMERA_FOV, this.canvas3d.width / this.canvas3d.height, 0.1, 1000 );
-
-			this.renderer = new THREE.WebGLRenderer({canvas: this.canvas3d});
-
-			this.renderer.setSize( this.canvas3d.width, this.canvas3d.height );
-			this.renderer.setClearColor(this.bkgColor);
 
 
-			var light = new THREE.AmbientLight( 0x666666, 1. ); 
-			var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.8 );
-			directionalLight.position.set( -2, 1, 1 );
-			this.scene.add( directionalLight );
-			this.scene.add( light );
-			
-			    
-			this.scene.add( this.sphere );
-			this.sphere.rotation.x = 2.21;
-			this.sphere.rotation.y = 0;
-			this.sphere.rotation.z = 0.68;
-			
-			this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
+RSCanvas.prototype = Object.create(InteractiveCanvas.prototype);
+var rp = RSCanvas.prototype;
 
-		    this.converter = new RSCanvas.PointConverter(this);
-			this.showGrid = this.configManager.getConfigValue("showGrid");
-			this.showLabels = this.configManager.getConfigValue("showLabels");
-			this.showAbsGrid = this.configManager.getConfigValue("showAbsGrid");
-			this.showDynamicGrid = this.configManager.getConfigValue("showDynamicGrid");
-			this.showAbsDynamicGrid = this.configManager.getConfigValue("showAbsDynamicGrid");
-		    this.grid = new Grid(this);
-		    this.createGrid();
-		    this.createTransformAnchors();
-		    this.createLegend();
-		    
-		    this.inited = true;
-		    
-
-			
-
-		},
-		
-		setTransform: function(transform) {
-			this.currentTransform = transform.copy();
-			this.updateTransform();
-			this.transformUpdated = true;
-			this.somethingChanged = true;
-		},
-		getTransform: function() {
-			return this.currentTransform.copy();
-		},
-		getDrawings: function() {
-			var res = [];
-			for (var i = 0; i < this.drawedLinesData.length; i++){
-				res[i] = this.drawedLinesData[i].slice(0);
-				if (this.drawedLinesData[i].hasOwnProperty("id")) res[i].id = this.drawedLinesData[i].id;
-			}
-			return res;
-		},
-		
-
-		getSnapshot: function() {
-			var snapshotXMLObj = this.getSnapshotElement();
-			var rootObj = createEmptyNode("updata");
-			if (this.serverId) rootObj.setAttribute("object", this.serverId);
-			rootObj.appendChild(snapshotXMLObj);
-			return xmlSerializer.serializeToString(rootObj);
-		
-		
-		},
-		getSnapshotElement: function() {
-			var snapshotXMLObj = createEmptyNode("canvas");
-			if (this.configManager.getConfigValue("reportImage")) {
-				this.somethingChanged = true;
-				this.render();
-				var imgData = this.canvas3d.toDataURL();
-				snapshotXMLObj.appendChild(document.createTextNode(imgData));
-			} else {
-				snapshotXMLObj.appendChild(this.getRotationElement());
-				
-				snapshotXMLObj.appendChild(this.getTransformElement());
+//--public functions----------------
+//constructor: RSCanvas,
+rp.constructor = RSCanvas;
+rp.init = function(canvas, materialData, canvasData) {
+	console.log(this);
 	
-				var ptsData = this.getSelectedPointsData();
-				for (var i = 0; i < ptsData.length; i++) {
-					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("point", ptsData[i]));
-				}
-				var drw = this.getDrawings();
-				for (var i = 0; i < drw.length; i++) {
-					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("line", drw[i]));
-				}
-				for (var i = 0; i < this.arcStyles.length; i++) {
-					snapshotXMLObj.appendChild(this.getSnapshotObjectElement("arc", this.arcStyles[i]));
-				}
-				if (this.sphere.material instanceof THREE.ShaderMaterial) { //shadermap
-					if (this.funcXML) {
-						snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
-					}
-				}
-			}
-			return snapshotXMLObj;
-			
-		},
-		getRotationElement: function() {
-			var rotEl = createEmptyNode("rotation");
-			rotEl.setAttribute("x", this.sphere.rotation.x);
-			rotEl.setAttribute("y", this.sphere.rotation.y);
-			rotEl.setAttribute("z", this.sphere.rotation.z);
-			rotEl.setAttribute("order", this.sphere.rotation.order);
-			return rotEl;
-			
-		},
-		getTransformElement: function() {
-			var transformEl = createEmptyNode("transform");
-			transformEl.appendChild(this.currentTransform.a.toXMLObj());
-			transformEl.appendChild(this.currentTransform.b.toXMLObj());
-			transformEl.appendChild(this.currentTransform.c.toXMLObj());
-			transformEl.appendChild(this.currentTransform.d.toXMLObj());
-			return transformEl;
-			
-		},
-		getSnapshotObjectElement: function (type, data) {
-			var el = createEmptyNode(type);
-			if (!data) console.error("Invalid snapshot argument", type, data);
-			else {
-				if (data.hasOwnProperty("id")) el.setAttribute("id", data.id);
-				if (this.serverId) el.setAttribute("canvas", this.serverId);
-				switch (type) {
-					case "point": return this.getSnapshotPointElement(data, el); break;
-					case "line": return this.getSnapshotLineElement(data, el); break;
-					case "arc": return this.getSnapshotArcElement(data, el); break;
-					default: console.error("Unknow element type", type);
-				}
-			}
-		}, 
-		
-		getSnapshotPointElement: function(data, pntEl){
-			pntEl.appendChild(data.anchor.value.toXMLObj());
-			var lbl = createEmptyNode("label");
-			if (data.message) {
-				lbl.appendChild(document.createTextNode(data.message));	
-				lbl.setAttribute("type", "text");
-			}
-			if (data.anchor.showValue) lbl.setAttribute("type", "number");
-			if (data.anchor.noLabel) lbl.setAttribute("type", "none");
-			pntEl.appendChild(lbl);
-			
-			if (data.color) pntEl.setAttribute("color", data.color);
-			if (data.radius) pntEl.setAttribute("radius", data.radius);
-			if (data.hasOwnProperty("movable")) pntEl.setAttribute("movable", data.movable);
-
-			return pntEl;
-			
-		} ,
-		
-		getSnapshotLineElement: function(data, el) {
-			for (var j = 0; j < data.length; j++ ) {
-				el.appendChild(data[j].toXMLObj());
-			}
-			return el;
-			
-		}, 
-		
-		getSnapshotArcElement: function (data, el) {
-			function getSpElement(vector) {
-				var spEl = createEmptyNode("sp");
-				var v = vector.clone().normalize();
-				spEl.setAttribute("x", v.x);
-				spEl.setAttribute("y", v.y);
-				spEl.setAttribute("z", v.z);
-				return spEl;
-			}
-			el.setAttribute("color", "#" + data.color.getHexString());
-			el.setAttribute("width", data.width);
-			if (Array.isArray(data.data))
-				for (var j = 0; j < data.data.length; j++)
-					el.appendChild(getSpElement(data.data[j]));
-			return el;
-		},
-
-		saveSnapshotToFile: function(name) {
-			var str=this.getSnapshot();
-			//https://github.com/eligrey/FileSaver.js
-			var filename = name || "data.txt";
-			//if (filename.indexOf(".") == -1) filename += ".txt";
-			saveAs (new Blob([str], {type: "text/plain;charset=utf-8"}), filename);
-		},
-		hasObject: function (id) {
-			var ptsData = this.getSelectedPointsData();
-			for (var i = 0; i < ptsData.length; i++){
-				if (ptsData[i].id == id) return "point";				
-			}
-			var drw = this.getDrawings();
-			for (var i = 0; i < drw.length; i++) {
-				if (drw[i].id == id) return "line";
-			}
-			for (var i = 0; i < this.arcStyles.length; i++){
-				if (this.arcStyles[i].id == id) return "arc";
-			}
-			return false;
-		}, 
-		parseData: function(data) {
-			console.log("parse data", data, DATA_IN_XML);
-			if (DATA_IN_XML) {
-				if (typeof data === "string") data = parseXml(data);
-				var ddata = data.getElementsByTagName("downdata");
-				if (ddata.length > 0) data = data.getElementsByTagName("downdata")[0];
-				ddata = data.getElementsByTagName("canvas");
-				if (ddata.length > 0) data = data.getElementsByTagName("canvas")[0];
-				var transformParsed = false;
-				var pointsParsed = false;
-				var linesParsed = false;
-				var rotationParsed = false;
-				var arcsParsed = false;
-				var configParsed = false;
-				var res = {};
-				
-				var transformData = data.getElementsByTagName("transform")[0];
-				if (transformData) {
-					if (transformData.childNodes.length < 4) {
-						consol.error("Data error. Incorrect 'transform' node.", transformData);
-					};
-					var trarr = [];
-					for (var i = 0; i < 4; i ++)
-						trarr.push(Complex.fromXML(transformData.childNodes[i]));
-					var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
-					this.setTransform(new_transform);
-					transformParsed = true;
-					console.log("transform", trarr, new_transform.toString());
-				}
-				
-				var pointsData = data.getElementsByTagName("point");
-				if (pointsData && pointsData.length > 0) {
-					var pts = [];
-					var params = [];
-					function readAttribute(name,  i) {
-						var val = pointsData[i].getAttribute(name);
-						if (val) {
-							if (!params[i]) params[i] = {};
-							params[i][name] = val;
-						}
-					}
-					for (var i = 0; i < pointsData.length; i++) {
-						var cnNode = pointsData[i].getElementsByTagName("cn")[0];
-						var spNode = pointsData[i].getElementsByTagName("sp")[0];
-						if (!cnNode && !spNode) console.error("Data error. 'Point' node must contain either 'cn' or 'sp' child", pointsData[i]);
-						else if (cnNode) pts.push(Complex.fromXML(cnNode));
-						else pts.push(CU.localToComplex(this.converter.xmlSPToLocal(spNode)));
-						params[i] = {};
-						var label = pointsData[i].getElementsByTagName("label")[0];
-						if (label) {
-							var labelType = label.getAttribute("type");
-							if (labelType) {
-								switch (labelType) {
-								case "text" : {
-									if (label.childNodes[0]) {
-										params[i].message = label.childNodes[0].nodeValue;
-									} else {
-										console.warn("No text inside a label of type \"text\"", label);
-									}
-									break;
-								}
-								case "number" : {
-									break;
-								}
-								case "none" : {
-									params[i].message = "empty";
-									break;
-								}
-								default: 
-									console.warn("Incorrect label type", labelType);
-								}
-							}
-							else if (label.childNodes[0]) {
-								params[i].message = label.childNodes[0].nodeValue;
-							}
-						}
-						readAttribute("color", i);
-						readAttribute("radius", i);
-						readAttribute("movable", i);
-						readAttribute("id", i);
-					}
-					this.addSelectedPoints(pts, params);
-					pointsParsed = true;
-					console.log("points", pts, params);
-				}
-				
-				var rotationData = data.getElementsByTagName("rotation")[0];
-				if (rotationData) {
-					if (!rotationData.hasAttributes()) console.error("Data error. 'rotation' node has no attributes", rotationData);
-					else {
-						var rotArgs = { x: parseFloat(rotationData.attributes.x.nodeValue),
-								y:parseFloat(rotationData.attributes.y.nodeValue),
-								z: parseFloat(rotationData.attributes.z.nodeValue),
-								order: rotationData.attributes.order.nodeValue.toUpperCase()
-								};
-						
-						if (isNaN(rotArgs.x) || isNaN(rotArgs.y) || isNaN(rotArgs.z)) console.error("Data error. Invalide 'rotation' attributes", rotArgs);
-						else {
-							var rot = new THREE.Euler( rotArgs.x, rotArgs.y, rotArgs.z, rotArgs.order );
-							var q = new THREE.Quaternion();
-							q.setFromEuler(rot);
-							this.sphere.quaternion.copy(q);
-							this.somethingChanged = true;
-							rotationParsed = true;
-							console.log("Rotataion", rot, this.sphere.quaternion.x, this.sphere.quaternion.y,this.sphere.quaternion.z,this.sphere.quaternion.w, q.x, q.y, q.z, q.w);
-							
-						}
-					}
-					
-					
-				}
-				var linesData = data.getElementsByTagName("line");
-				if (linesData && linesData.length > 0) {
-					for (var i = 0; i < linesData.length; i++) {
-						var newLine = [];
-						for (var j = 0; j < linesData[i].childNodes.length; j++) {
-							if (linesData[i].childNodes[j].nodeName == "cn" ){
-								newLine.push(Complex.fromXML (linesData[i].childNodes[j]));
-							}
-						}
-						if (linesData[i].getAttribute("id")) newLine.id = linesData[i].getAttribute("id");
-						else newLine.id = this.getNewObjectID("line");
-						this.drawedLinesData.push(newLine);
-					}
-					console.log("lines parsed", this.drawedLinesData);
-					linesParsed = true;
-					this.linesUpdated = true;
-					var l = linesData.length;
-					while(l > 0){
-						this.addNewElement(this.getSnapshotObjectElement("line", this.drawedLinesData[this.drawedLinesData.length - (l--)]));
-					}
-					this.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
-					
-
-				}
-				
-				var arcsData = data.getElementsByTagName("arc");
-				if (arcsData && arcsData.length > 0) {
-					function parseFloatAttribute(node, name) {
-						var r = parseFloat(node.getAttribute(name));
-						if (isNaN(r)) return 0;
-						return r;
-					}
-					function spointToVector(spNode) {
-						var v = new THREE.Vector3(parseFloatAttribute(spNode, "x"), parseFloatAttribute(spNode, "y"), parseFloatAttribute(spNode, "z"));
-						if (v.x == 0 && v.y == 0 && v.z == 0) console.error("Invalid sphere point", spNode);
-						return v.normalize();
-					}
-					
-					var arcsAdded = 0;
-					for (var i = 0; i < arcsData.length; i++) {
-						var styleObj = {};
-						var cString = arcsData[i].getAttribute("color"); 
-						if (cString) {
-							styleObj.color = ConfigManager.parseColor(cString)
-						} else {
-							styleObj.color = this.configManager.getConfigValue("arcColor");
-						}
-						var wNum = parseFloat(arcsData[i].getAttribute("width"));
-						if (wNum && !isNaN(wNum)) {
-							styleObj.width = wNum;
-						} else {
-							styleObj.width = this.configManager.getConfigValue("arcWidth");
-						}
-						if (arcsData[i].getAttribute("type") == "transformation")
-							styleObj.type = "transform";
-						var curArcData = [];
-						var succes = false;
-						if (arcsData[i].getAttribute("type") == "transformation") {
-							var transformCoefs = arcsData[i].getElementsByTagName("cn");
-							if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at four <cn> child nodes", arcsData[i]);
-							else {
-								var t = new MoebiusTransform(Complex.fromXML(transformCoefs[0]),
-															Complex.fromXML(transformCoefs[1]),
-															Complex.fromXML(transformCoefs[2]),
-															Complex.fromXML(transformCoefs[3]));
-								var arcDataComplex = [t.apply(Complex["0"]), t.apply(Complex(0.5, 0)),t.apply(Complex["1"])];
-								curArcData.push(CU.complexToLocalNormalized(t.apply(Complex["0"])),
-										CU.complexToLocalNormalized(t.apply(Complex(0.5, 0))),
-										CU.complexToLocalNormalized(t.apply(Complex["1"])));
-								this.arcsData.push([curArcData[0].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    curArcData[1].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    curArcData[2].multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-								succes = true;
-							}
-						} else {
-							var sps = arcsData[i].getElementsByTagName("sp");
-							if (!sps || sps.length ==0) {
-								var cns = arcsData[i].getElementsByTagName("cn");
-								if (!cns || cns.length == 0) {
-									console.error("Arc entry contains no point", arcsData[i]);
-								} else {
-									for (var j = 0; j < cns.length; j++)
-										curArcData.push(CU.complexToLocalNormalized(Complex.fromXML(cns[j])));
-								}
-								
-							} else {
-								for (var j = 0; j < sps.length; j++)
-									curArcData.push(spointToVector(sps[j]));
-							}
-							var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
-							if (v1.equals(v2)) {
-								var v0 = curArcData[1].normalize();
-								var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
-								this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-								                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-								succes = true;
-							} else {
-								var mid = (new THREE.Vector3()).addVectors(v1, v2);
-								if (mid.length == 0)
-									this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-								else {
-									mid.normalize();
-									var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
-									this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-								}
-								succes = true;
-							}
-						}
-						if (succes) {
-							if (arcsData[i].getAttribute("id")) styleObj.id = arcsData[i].getAttribute("id");
-							else styleObj.id = this.getNewObjectID("arc");
-							this.arcStyles.push(styleObj);
-							arcsAdded++;
-							
-						}
-						
-					}
-					this.drawArcs();
-					while(arcsAdded > 0){
-						this.addNewElement(this.getSnapshotObjectElement("arc", this.arcStyles[this.arcStyles.length - (arcsAdded--)]));
-					}
-					this.canvas3d.dispatchEvent(new CustomEvent("arcsChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
-					console.log("arcs parsed", this.arcsData);
-					arcsParsed = true;
-				}
-				var configData = data.getElementsByTagName("config");
-				if (configData && configData.length > 0){
-					var newConfig = {};
-					for (var i = 0; i < configData.length; i++) {
-						ConfigManager.parseXMLNode(configData[i], newConfig);
-					}
-					var canvasFormatChanged = false;
-					var legendChanged = false;
-					var styleChanged = false;
-					for (var f in newConfig)
-						if (newConfig.hasOwnProperty(f)) {
-							if (ConfigManager.checkFieldType(f) == "canvasFormat")
-								canvasFormatChanged = true;
-							if (f.substr(0, 6) == "legend" || f == "showLegend")
-								legendChanged = true;
-							if (ConfigManager.checkFieldType(f) == "style")
-								styleChanged = true;
-						}
-					if (canvasFormatChanged || styleChanged) {
-						this.configManager.updateMultiple(newConfig);
-						if (legendChanged) this.updateLegendPosition();
-						this.render();
-					}
-					configParsed = true;
-				}
-				
-				this.newDataLoaded = true;
-				this.somethingChanged = true;
-
-			}
-			else {
-				function parseLineOfComplex(line_arr, res) {
-					if (!res) res = [];
-					
-					var index = 0;
-					while (isNaN(parseFloat(line_arr[index++])) && index < line_arr.length);
-					index--;
-					while (index < line_arr.length-1) {
-						res.push(Complex(parseFloat(line_arr[index++]), parseFloat(line_arr[index++])));
-					}
-					return res;
-				}
-				var data_arr = data.split("\n");
-				var transformParsed = false;
-				var pointsParsed = false;
-				var linesParsed = false;
-				var rotationParsed = false;
-				var res = {};
-				var index = -1;
-				var line = [];
-				//var curArcsNum = 0;
+	var lblm = new RSCanvas.LabelManager(this);
+	InteractiveCanvas.prototype.init.call(this, canvas, materialData, canvasData);
+	this.sphere = this.object;
+	this.sphere.rotation.x = 2.21;
+	this.sphere.rotation.y = 0;
+	this.sphere.rotation.z = 0.68;
 	
-				while ((!transformParsed || !pointsParsed || !linesParsed || !rotationParsed) 
-						&& (++index) < data_arr.length) {
-					line = data_arr[index].split(" ");
-					if (line[0] == "TRANSFORM") {
-						var trarr = parseLineOfComplex(line);
-						var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
-						this.setTransform(new_transform);
-						transformParsed = true;
-						console.log("transform", new_transform.toString());
-					}
-					if (line[0] == "POINTS") {
-						var pts = parseLineOfComplex(line);
-						this.setNewSelectedPoints(pts);
-						pointsParsed = true;
-						console.log("points", pts);
-					}
-					if (line[0] == "ROTATION") {
-						var rot = new THREE.Euler( parseFloat(line[1]), parseFloat(line[2]), parseFloat(line[3]), line[4].toUpperCase() );
-						var q = new THREE.Quaternion();
-						q.setFromEuler(rot);
-						this.sphere.quaternion.copy(q);
-						this.somethingChanged = true;
-						rotationParsed = true;
-						console.log("Rotataion", rot, this.sphere.quaternion.x, this.sphere.quaternion.y,this.sphere.quaternion.z,this.sphere.quaternion.w, q.x, q.y, q.z, q.w);
-					}
-					if (line[0] == "LINES") {
-						var l = parseInt(line[1]);
-						console.log("parsing lines!!!", l);
-						while (l > 0) {
-							
-							l--;
-							this.drawedLinesData.push(parseLineOfComplex(data_arr[++index].split(" ")));
-						}
-						console.log("lines parsed", this.drawedLinesData);
-						linesParsed = true;
-					}
-					if (line[0] == "ARCS") {
-						var arcsNumLeft = parseInt(line[1]);
-						if (arcsNumLeft == 0 || line[2]) {
-							//this.arcsData = new Array();
-							//this.arcStyles = new Array();
-							this.resetArcs();
-							this.arcsNum = arcsNumLeft;
-						}
-						else this.arcsNum += arcsNumLeft;
-						
-						while (arcsNumLeft > 0){
-							arcsNumLeft--;
-							var arcHeader = data_arr[++index].split(" ");
-							if (arcHeader[0] == "ARC") {
-								this.arcStyles.push( 
-									new THREE.Color("rgb(" + arcHeader[2] + ", " + arcHeader[3] + ", " + arcHeader[4] + ")"));
-								var arcPointsLeft = parseInt(arcHeader[1]);
-								var curArcData = new Array();
-								while (arcPointsLeft > 0) {
-									arcPointsLeft--;
-									var arcPointRawData = data_arr[++index].split(" ");
-										
-									curArcData.push(( new THREE.Vector3(parseFloat(arcPointRawData[0]),
-											parseFloat(arcPointRawData[1]),
-											parseFloat(arcPointRawData[2]))));
-								}
-								var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
-								if (v1.equals(v2)) {
-									var v0 = curArcData[1].normalize();
-									var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
-									this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-									                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-								} else {
-									var mid = (new THREE.Vector3()).addVectors(v1, v2);
-									if (mid.length == 0)
-										this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-										                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-										                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-									else {
-										mid.normalize();
-										var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
-										this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-										                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
-										                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
-									}
-								}
-							} else {
-								console.warn("Invalid ARC entry", arcHeader);
-							}
-						}
-						console.log("Arcs parsed", this.arcsData, this.arcStyles);
-						this.drawArcs();
-					}
-					if (line[0].toLowerCase() == "config") {
-						var newConfig = ConfigManager.parseString(line);
-						var canvasFormatChanged = false;
-						for (var f in newConfig)
-							if (newConfig.hasOwnProperty(f))
-								if (ConfigManager.checkFieldType(f) == "canvasFormat")
-									canvasFormatChanged = true;
-						if (canvasFormatChanged) {
-							this.configManager.updateMultiple(res);
-							this.render();
-						}
-								
-					}
-				}
-			this.newDataLoaded = true;
-			this.somethingChanged = true;
-			//if (transformParsed || rotationParsed)
-				//this.canvas3d.dispatchEvent(new CustomEvent("sphereMoved"));
+	this.camera.position.z = RSCanvas.CAMERA_DISTANCE*Math.max(1, this.canvas3d.height/this.canvas3d.width);
 
-			}
-		},
-		
-		updateSphereMaterial: function (materialData, rebuildShader) {
-			if (materialData instanceof ComplexShaderMap) {
-				if (materialData.initData && materialData.initData.xml ) {
-					this.funcXML = materialData.initData.xml;
-					var functionData = this.funcXML;
-					if (functionData) {
-						var cycles = functionData.getElementsByTagName("cycle");
-						var legendData = [];
-						if (cycles && cycles.length > 0) {
-							for (var i = 0; i < cycles.length; i ++){
-								var numbers = cycles[i].getElementsByTagName("cn");
-								for (var j = 0; j < numbers.length; j++)
-									legendData.push(Complex.fromXML(numbers[j]));
-							}
-								
-						}
-						var jColor = new THREE.Color();
-						jColor.set(this.configManager.getConfigValue("juliaColor"));
-						jColor.message = "Julia set"
-						legendData.push(jColor);
-						this.legend.update(legendData);
-						this.updateLegendPosition();
-					}
-
-				}
-				if (!(this.sphere.material instanceof THREE.ShaderMaterial) )
-					this.sphere.material = this.initShaderMaterial(this.sphere.geometry, materialData);
-				if (rebuildShader) {
-					this.sphere.material.fragmentShader = this.getFragmentShaderString(materialData);
-					this.sphere.material.needsUpdate = true;
-				} else {
-					for (var s in materialData.uniforms) {
-						if (!ComplexShaderMap.uniformsTypesMap[materialData.uniforms[s].type].array) {
-							
-							this.sphere.material.uniforms[s].value = materialData.uniforms[s].value;
-							this.sphere.material.uniforms[s].needsUpdate = true;
-						}
-					}
-				}
-				this.configManager.updateMultiple(materialData.initData.config);
-				this.somethingChanged = true;
-
-			} else {
-				this.sphere.material.complexTextureImage.update(this, materialData);
-				this.sphere.material.map.needsUpdate = true;
-			}
-			
-		},
-		
-		//------ end of public functions ----------------------
-		//--------------vars---------------------------------
-	
-		currentTransform: MoebiusTransform.identity,
-		somethingChanged: true,
-		showGrid: true,
-		showAbsGrid: true,
-		transformUpdated: true,
-		linesUpdated: true,
-		inited: false,
-		newDataLoaded: false,
-
-		
-		selectedPointsLimit: -1,
-
-
-		
-		sphere: {},
-		renderer: {},
-		scene: {},
-		camera: {},
-		marker: {},
-		localMarker: {},
-		canvasStyle: {},
-		canvas3d: {},
-		
-		converter: {}, 
-
-
-
-		//----------------------------------------------------------
-		
+    this.converter = new RSCanvas.PointConverter(this);
+	this.showGrid = this.configManager.getConfigValue("showGrid");
+	this.showLabels = this.configManager.getConfigValue("showLabels");
+	this.showAbsGrid = this.configManager.getConfigValue("showAbsGrid");
+	this.showDynamicGrid = this.configManager.getConfigValue("showDynamicGrid");
+	this.showAbsDynamicGrid = this.configManager.getConfigValue("showAbsDynamicGrid");
+    this.grid = new Grid(this);
+    this.createGrid();
+    this.createTransformAnchors();
+    this.createLegend();
 };
+
+rp.getObjectGeometry = function () {
+	return new THREE.SphereBufferGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
+	
+}
+
+
+rp.setTransform = function(transform) {
+	this.currentTransform = transform.copy();
+	this.updateTransform();
+	this.transformUpdated = true;
+	this.somethingChanged = true;
+};
+rp.getTransform = function() {
+	return this.currentTransform.copy();
+};
+rp.getDrawings = function() {
+	var res = [];
+	for (var i = 0; i < this.drawedLinesData.length; i++){
+		res[i] = this.drawedLinesData[i].slice(0);
+		if (this.drawedLinesData[i].hasOwnProperty("id")) res[i].id = this.drawedLinesData[i].id;
+	}
+	return res;
+};
+
+
+
+rp.getSnapshotElement = function() {
+	var snapshotXMLObj = InteractiveCanvas.prototype.getSnapshotElement.call(this);
+	if (!this.configManager.getConfigValue("reportImage")) {
+		snapshotXMLObj.setAttribute("geometry", "sphere");
+		snapshotXMLObj.appendChild(this.getRotationElement());
+		
+		snapshotXMLObj.appendChild(this.getTransformElement());
+
+		var ptsData = this.getSelectedPointsData();
+		for (var i = 0; i < ptsData.length; i++) {
+			snapshotXMLObj.appendChild(this.getSnapshotObjectElement("point", ptsData[i]));
+		}
+		var drw = this.getDrawings();
+		for (var i = 0; i < drw.length; i++) {
+			snapshotXMLObj.appendChild(this.getSnapshotObjectElement("line", drw[i]));
+		}
+		for (var i = 0; i < this.arcStyles.length; i++) {
+			snapshotXMLObj.appendChild(this.getSnapshotObjectElement("arc", this.arcStyles[i]));
+		}
+	}
+	return snapshotXMLObj;
+};
+rp.getRotationElement = function() {
+	var rotEl = createEmptyNode("rotation");
+	rotEl.setAttribute("x", this.sphere.rotation.x);
+	rotEl.setAttribute("y", this.sphere.rotation.y);
+	rotEl.setAttribute("z", this.sphere.rotation.z);
+	rotEl.setAttribute("order", this.sphere.rotation.order);
+	return rotEl;
+	
+};
+rp.getTransformElement = function() {
+	var transformEl = createEmptyNode("transform");
+	transformEl.appendChild(this.currentTransform.a.toXMLObj());
+	transformEl.appendChild(this.currentTransform.b.toXMLObj());
+	transformEl.appendChild(this.currentTransform.c.toXMLObj());
+	transformEl.appendChild(this.currentTransform.d.toXMLObj());
+	return transformEl;
+	
+};
+rp.getSnapshotObjectElement = function (type, data) {
+	var el = createEmptyNode(type);
+	if (!data) console.error("Invalid snapshot argument", type, data);
+	else {
+		if (data.hasOwnProperty("id")) el.setAttribute("id", data.id);
+		if (this.serverId) el.setAttribute("canvas", this.serverId);
+		switch (type) {
+			case "point": return this.getSnapshotPointElement(data, el); break;
+			case "line": return this.getSnapshotLineElement(data, el); break;
+			case "arc": return this.getSnapshotArcElement(data, el); break;
+			default: console.error("Unknow element type", type);
+		}
+	}
+};
+
+rp.getSnapshotPointElement = function(data, pntEl){
+	pntEl.appendChild(data.anchor.value.toXMLObj());
+	var lbl = createEmptyNode("label");
+	if (data.message) {
+		lbl.appendChild(document.createTextNode(data.message));	
+		lbl.setAttribute("type", "text");
+	}
+	if (data.anchor.showValue) lbl.setAttribute("type", "number");
+	if (data.anchor.noLabel) lbl.setAttribute("type", "none");
+	pntEl.appendChild(lbl);
+	
+	if (data.color) pntEl.setAttribute("color", data.color);
+	if (data.radius) pntEl.setAttribute("radius", data.radius);
+	if (data.hasOwnProperty("movable")) pntEl.setAttribute("movable", data.movable);
+
+	return pntEl;
+	
+};
+
+rp.getSnapshotLineElement = function(data, el) {
+	for (var j = 0; j < data.length; j++ ) {
+		el.appendChild(data[j].toXMLObj());
+	}
+	return el;
+	
+};
+
+rp.getSnapshotArcElement = function (data, el) {
+	function getSpElement(vector) {
+		var spEl = createEmptyNode("sp");
+		var v = vector.clone().normalize();
+		spEl.setAttribute("x", v.x);
+		spEl.setAttribute("y", v.y);
+		spEl.setAttribute("z", v.z);
+		return spEl;
+	}
+	el.setAttribute("color", "#" + data.color.getHexString());
+	el.setAttribute("width", data.width);
+	if (Array.isArray(data.data))
+		for (var j = 0; j < data.data.length; j++)
+			el.appendChild(getSpElement(data.data[j]));
+	return el;
+};
+
+rp.saveSnapshotToFile = function(name) {
+	var str=this.getSnapshot();
+	//https://github.com/eligrey/FileSaver.js
+	var filename = name || "data.txt";
+	//if (filename.indexOf(".") == -1) filename += ".txt";
+	saveAs (new Blob([str], {type: "text/plain;charset=utf-8"}), filename);
+};
+rp.hasObject = function (id) {
+	var ptsData = this.getSelectedPointsData();
+	for (var i = 0; i < ptsData.length; i++){
+		if (ptsData[i].id == id) return "point";				
+	}
+	var drw = this.getDrawings();
+	for (var i = 0; i < drw.length; i++) {
+		if (drw[i].id == id) return "line";
+	}
+	for (var i = 0; i < this.arcStyles.length; i++){
+		if (this.arcStyles[i].id == id) return "arc";
+	}
+	return false;
+};
+
+rp.parseData = function(data) {
+	console.log("parse data", data, DATA_IN_XML);
+	data = InteractiveCanvas.prototype.parseData.call(this, data);
+	var transformParsed = false;
+	var pointsParsed = false;
+	var linesParsed = false;
+	var rotationParsed = false;
+	var arcsParsed = false;
+	
+	var transformData = data.getElementsByTagName("transform")[0];
+	if (transformData) {
+		if (transformData.childNodes.length < 4) {
+			consol.error("Data error. Incorrect 'transform' node.", transformData);
+		};
+		var trarr = [];
+		for (var i = 0; i < 4; i ++)
+			trarr.push(Complex.fromXML(transformData.childNodes[i]));
+		var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
+		this.setTransform(new_transform);
+		transformParsed = true;
+		console.log("transform", trarr, new_transform.toString());
+	}
+	
+	var pointsData = data.getElementsByTagName("point");
+	if (pointsData && pointsData.length > 0) {
+		var pts = [];
+		var params = [];
+		function readAttribute(name,  i) {
+			var val = pointsData[i].getAttribute(name);
+			if (val) {
+				if (!params[i]) params[i] = {};
+				params[i][name] = val;
+			}
+		}
+		for (var i = 0; i < pointsData.length; i++) {
+			var cnNode = pointsData[i].getElementsByTagName("cn")[0];
+			var spNode = pointsData[i].getElementsByTagName("sp")[0];
+			if (!cnNode && !spNode) console.error("Data error. 'Point' node must contain either 'cn' or 'sp' child", pointsData[i]);
+			else if (cnNode) pts.push(Complex.fromXML(cnNode));
+			else pts.push(CU.localToComplex(this.converter.xmlSPToLocal(spNode)));
+			params[i] = {};
+			var label = pointsData[i].getElementsByTagName("label")[0];
+			if (label) {
+				var labelType = label.getAttribute("type");
+				if (labelType) {
+					switch (labelType) {
+					case "text" : {
+						if (label.childNodes[0]) {
+							params[i].message = label.childNodes[0].nodeValue;
+						} else {
+							console.warn("No text inside a label of type \"text\"", label);
+						}
+						break;
+					}
+					case "number" : {
+						break;
+					}
+					case "none" : {
+						params[i].message = "empty";
+						break;
+					}
+					default: 
+						console.warn("Incorrect label type", labelType);
+					}
+				}
+				else if (label.childNodes[0]) {
+					params[i].message = label.childNodes[0].nodeValue;
+				}
+			}
+			readAttribute("color", i);
+			readAttribute("radius", i);
+			readAttribute("movable", i);
+			readAttribute("id", i);
+		}
+		this.addSelectedPoints(pts, params);
+		pointsParsed = true;
+		console.log("points", pts, params);
+	}
+	
+	var rotationData = data.getElementsByTagName("rotation")[0];
+	if (rotationData) {
+		if (!rotationData.hasAttributes()) console.error("Data error. 'rotation' node has no attributes", rotationData);
+		else {
+			var rotArgs = { x: parseFloat(rotationData.attributes.x.nodeValue),
+					y:parseFloat(rotationData.attributes.y.nodeValue),
+					z: parseFloat(rotationData.attributes.z.nodeValue),
+					order: rotationData.attributes.order.nodeValue.toUpperCase()
+					};
+			
+			if (isNaN(rotArgs.x) || isNaN(rotArgs.y) || isNaN(rotArgs.z)) console.error("Data error. Invalide 'rotation' attributes", rotArgs);
+			else {
+				var rot = new THREE.Euler( rotArgs.x, rotArgs.y, rotArgs.z, rotArgs.order );
+				var q = new THREE.Quaternion();
+				q.setFromEuler(rot);
+				this.sphere.quaternion.copy(q);
+				this.somethingChanged = true;
+				rotationParsed = true;
+				console.log("Rotataion", rot, this.sphere.quaternion.x, this.sphere.quaternion.y,this.sphere.quaternion.z,this.sphere.quaternion.w, q.x, q.y, q.z, q.w);
+				
+			}
+		}
+		
+		
+	}
+	var linesData = data.getElementsByTagName("line");
+	if (linesData && linesData.length > 0) {
+		for (var i = 0; i < linesData.length; i++) {
+			var newLine = [];
+			for (var j = 0; j < linesData[i].childNodes.length; j++) {
+				if (linesData[i].childNodes[j].nodeName == "cn" ){
+					newLine.push(Complex.fromXML (linesData[i].childNodes[j]));
+				}
+			}
+			if (linesData[i].getAttribute("id")) newLine.id = linesData[i].getAttribute("id");
+			else newLine.id = this.getNewObjectID("line");
+			this.drawedLinesData.push(newLine);
+		}
+		console.log("lines parsed", this.drawedLinesData);
+		linesParsed = true;
+		this.linesUpdated = true;
+		var l = linesData.length;
+		while(l > 0){
+			this.addNewElement(this.getSnapshotObjectElement("line", this.drawedLinesData[this.drawedLinesData.length - (l--)]));
+		}
+		this.canvas3d.dispatchEvent(new CustomEvent("linesChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
+		
+
+	}
+	
+	var arcsData = data.getElementsByTagName("arc");
+	if (arcsData && arcsData.length > 0) {
+		function parseFloatAttribute(node, name) {
+			var r = parseFloat(node.getAttribute(name));
+			if (isNaN(r)) return 0;
+			return r;
+		}
+		function spointToVector(spNode) {
+			var v = new THREE.Vector3(parseFloatAttribute(spNode, "x"), parseFloatAttribute(spNode, "y"), parseFloatAttribute(spNode, "z"));
+			if (v.x == 0 && v.y == 0 && v.z == 0) console.error("Invalid sphere point", spNode);
+			return v.normalize();
+		}
+		
+		var arcsAdded = 0;
+		for (var i = 0; i < arcsData.length; i++) {
+			var styleObj = {};
+			var cString = arcsData[i].getAttribute("color"); 
+			if (cString) {
+				styleObj.color = ConfigManager.parseColor(cString)
+			} else {
+				styleObj.color = this.configManager.getConfigValue("arcColor");
+			}
+			var wNum = parseFloat(arcsData[i].getAttribute("width"));
+			if (wNum && !isNaN(wNum)) {
+				styleObj.width = wNum;
+			} else {
+				styleObj.width = this.configManager.getConfigValue("arcWidth");
+			}
+			if (arcsData[i].getAttribute("type") == "transformation")
+				styleObj.type = "transform";
+			var curArcData = [];
+			var succes = false;
+			if (arcsData[i].getAttribute("type") == "transformation") {
+				var transformCoefs = arcsData[i].getElementsByTagName("cn");
+				if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at four <cn> child nodes", arcsData[i]);
+				else {
+					var t = new MoebiusTransform(Complex.fromXML(transformCoefs[0]),
+												Complex.fromXML(transformCoefs[1]),
+												Complex.fromXML(transformCoefs[2]),
+												Complex.fromXML(transformCoefs[3]));
+					var arcDataComplex = [t.apply(Complex["0"]), t.apply(Complex(0.5, 0)),t.apply(Complex["1"])];
+					curArcData.push(CU.complexToLocalNormalized(t.apply(Complex["0"])),
+							CU.complexToLocalNormalized(t.apply(Complex(0.5, 0))),
+							CU.complexToLocalNormalized(t.apply(Complex["1"])));
+					this.arcsData.push([curArcData[0].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+					                    curArcData[1].multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+					                    curArcData[2].multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+					succes = true;
+				}
+			} else {
+				var sps = arcsData[i].getElementsByTagName("sp");
+				if (!sps || sps.length ==0) {
+					var cns = arcsData[i].getElementsByTagName("cn");
+					if (!cns || cns.length == 0) {
+						console.error("Arc entry contains no point", arcsData[i]);
+					} else {
+						for (var j = 0; j < cns.length; j++)
+							curArcData.push(CU.complexToLocalNormalized(Complex.fromXML(cns[j])));
+					}
+					
+				} else {
+					for (var j = 0; j < sps.length; j++)
+						curArcData.push(spointToVector(sps[j]));
+				}
+				var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
+				if (v1.equals(v2)) {
+					var v0 = curArcData[1].normalize();
+					var v01 = (new THREE.Vector3()).addVectors(v1, v0).negate().normalize();
+					this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+					                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+					                    v01.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+					                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+					succes = true;
+				} else {
+					var mid = (new THREE.Vector3()).addVectors(v1, v2);
+					if (mid.length == 0)
+						this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+						                    curArcData[1].normalize().multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+						                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+					else {
+						mid.normalize();
+						var v0 = mid.distanceTo(curArcData[1].normalize()) > mid.distanceTo(v1) ? mid.negate() : mid;
+						this.arcsData.push([v1.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+						                    v0.multiplyScalar(RSCanvas.SPHERE_RADIUS), 
+						                    v2.multiplyScalar(RSCanvas.SPHERE_RADIUS)]);
+					}
+					succes = true;
+				}
+			}
+			if (succes) {
+				if (arcsData[i].getAttribute("id")) styleObj.id = arcsData[i].getAttribute("id");
+				else styleObj.id = this.getNewObjectID("arc");
+				this.arcStyles.push(styleObj);
+				arcsAdded++;
+				
+			}
+			
+		}
+		this.drawArcs();
+		while(arcsAdded > 0){
+			this.addNewElement(this.getSnapshotObjectElement("arc", this.arcStyles[this.arcStyles.length - (arcsAdded--)]));
+		}
+		this.canvas3d.dispatchEvent(new CustomEvent("arcsChanged", {detail:{action: "created", object: this.serverId, data: this.readNewElements()}}));
+		console.log("arcs parsed", this.arcsData);
+		arcsParsed = true;
+	}
+	this.newDataLoaded = true;
+	this.somethingChanged = true;
+
+
+};
+
+
+	
+rp.getAttributeValues = function(posArr, i, res) {
+	if (!res) res = {};
+	var curPos = new THREE.Vector3();
+	curPos.set(posArr.getX(i), posArr.getY(i), posArr.getZ(i));
+	var c0 = CU.localToComplex(curPos);
+	var c, scale;
+	if (this.currentTransform) {
+		c = this.currentTransform.apply(c0);
+		scale = this.currentTransform.scale(c);
+	} else {
+		c = c0; 
+		scale = 1.;
+	}
+	res.c = c;
+	res.scale = scale;
+	
+	return res;
+	
+};
+
+
+
+
+//------ end of public functions ----------------------
+//--------------vars---------------------------------
+
+rp.currentTransform = MoebiusTransform.identity;
+rp.somethingChanged= true;
+rp.showGrid= true;
+rp.showAbsGrid= true;
+rp.transformUpdated= true;
+rp.linesUpdated= true;
+rp.inited= false;
+rp.newDataLoaded= false;
+
+
+rp.selectedPointsLimit= -1;
+
+
+
+rp.sphere= {};
+rp.renderer= {};
+rp.scene= {};
+rp.camera= {};
+rp.marker= {};
+rp.localMarker= {};
+rp.canvasStyle= {};
+rp.canvas3d= {};
+
+rp.converter= {}; 
+
+
+
+//----------------------------------------------------------
+
+//};
 
 RSCanvas.PointConverter = function (rsc) {
 	this.canvasObj = rsc;
 	
-},
+};
 
 RSCanvas.PointConverter.prototype = {
 		constructor: RSCanvas.PointConverter,
@@ -2076,7 +1660,7 @@ RSCanvas.PointConverter.sphericalToLocalNormalized = function(sph) {
 			-Math.sin(sph.theta),
 			-Math.cos(sph.theta)*Math.sin(sph.phi)
 		);
-},
+};
 
 
 RSCanvas.PointConverter.localToSpherical = function(pos) {
@@ -2145,4 +1729,4 @@ RSCanvas.LabelManager.prototype = {
 		constructor: RSCanvas.LabelManager
 } ;
 console.log("RSCanvas the last line");
-	
+;	

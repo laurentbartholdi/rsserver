@@ -7,18 +7,18 @@ function makeNewtonDataStructure(roots, resArg) {
 	var newCoefs = [];
 	var N = roots.length;
 	funcs[0]= Complex["1"];
-	console.log(roots);
+	//console.log(roots);
 	for (var l = 0; l < N; l++) {
 		for (var k = 0; k <= l; k++) {
 			newCoefs[k] = Complex.neg(roots[l]).mult(funcs[k]).add(k == 0 ? Complex["0"]:funcs[k-1]); 
 		}
 		newCoefs[l+1] = Complex["1"];
-		console.log(l, newCoefs, funcs[0]);
+		//console.log(l, newCoefs, funcs[0]);
 		for (var j = 0; j <= l+1; j++) {
 			funcs[j] = newCoefs[j];
 		}
 	}
-	console.log(funcs);
+	//console.log(funcs);
 	var den = [];
 	var num = [];
 	for (var i = 0; i < N; i++) {
@@ -27,7 +27,7 @@ function makeNewtonDataStructure(roots, resArg) {
 	}
 	den[N] = Complex["0"];
 	num[N] = funcs[N].multiplyScalar(N-1);
-	console.log("num", num, "den", den, "funcs", funcs);
+	//console.log("num", num, "den", den, "funcs", funcs);
 	var res = resArg || [];
 	res[0] = "FUNCTION";
 	for (var m = 0; m <= N; m++) {

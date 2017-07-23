@@ -195,7 +195,10 @@ ConfigManager.defaultConfig = {width: 800, height: 600, bkgColor: 0x333333,
 		legendMarkerSize: 20,
 		legendPosition: "lt", //left-top
 		legendTextColor: 0x999999,
-		reportImage: false
+		reportImage: false,
+		centerRe: 0, //for plane canvas
+		centerIm: 0, //for plane canvas
+		scale: 1 //for plane canvas
 		};
 ConfigManager.canvasFormatFields = {width : "f", height: "f", 
 		bkgColor: "color", 
@@ -204,7 +207,7 @@ ConfigManager.canvasFormatFields = {width : "f", height: "f",
 		showArcs: "bool",
 		reportTransform: "bool", reportRotation: "bool",
 		showLegend: "bool", legendMarkerSize: "f", legendPosition: "string", legendTextColor: "color",
-		reportImage: "bool"};
+		reportImage: "bool", centerRe: "f", centerIm: "f", scale: "f"};
 ConfigManager.shaderFields = {
 		actualInfinity: "f", 
 		pixelSize: "f", 

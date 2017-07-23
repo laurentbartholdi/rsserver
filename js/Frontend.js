@@ -97,29 +97,47 @@ var DATA_IN_XML = true;
 					if (node.hasAttribute(names[i])) obj[names[i]] = node.getAttribute(names[i]);
 				}
 			}
-			attributesToObject(["width", "height", "color", "geometry", "name"], dataElement, canvasData); 
+			attributesToObject(["width", "height", "color", "geometry", "name", "static"], dataElement, canvasData); 
 			canvasData.bkgColor = canvasData.color||"#333333"; //backward compatibility
 			canvasData.geometry = canvasData.geometry || "sphere";
-			if (canvasData.geometry == "sphere") {
-				var rscc = new RSCanvasContainer(
-						pageElement, 
-						surfaceData, 
-						canvasData, 
-						dataElement.getAttribute("id") + "_internal");
+			if (!canvasData.hasOwnProperty("static")) canvasData["static"] = false;
+			canvasData["static"] = ConfigManager.parseBool(canvasData["static"]);
+			if (!canvasData["static"]) {
+				var rscc;
+				if (canvasData.geometry == "sphere")
+					{rscc = new RSCanvasContainer(
+							pageElement, 
+							surfaceData, 
+							canvasData, 
+							dataElement.getAttribute("id") + "_internal");
+					}
+				else {
+					rscc = new PlaneCanvasContainer(
+							pageElement, 
+							surfaceData, 
+							canvasData, 
+							dataElement.getAttribute("id") + "_internal");
+					
+				}
 				var outputLine = document.createElement('div'); //The output of the function formula
 				outputLine.setAttribute("class", "output-line");
 				outputLine.setAttribute("id", dataElement.getAttribute("id") + "_output");
 				pageElement.appendChild(outputLine);
 				pageElement.outputLine = outputLine;
-				if (rscc && rscc.rsCanvas && rscc.rsCanvas.canvas3d ) {
+				if (rscc && rscc.rsCanvas 
+						&& rscc.rsCanvas.canvas3d ) {
 					pageElement.rscc = rscc;
 					rscc.rsCanvas.canvas3d.addEventListener("SnapshotSaved", sendData); //Burned when the 'submit' button pressed
-					rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasUpdated);
-					rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasUpdated);
-					rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasUpdated);
-					rscc.rsCanvas.canvas3d.addEventListener("rotationChanged", onCanvasUpdated);
 					rscc.rsCanvas.canvas3d.addEventListener("transformChanged", onCanvasUpdated);
-				}
+					if (rscc.rsCanvas instanceof RSCanvas ) {
+						
+						rscc.rsCanvas.canvas3d.addEventListener("selectedPointsChanged", onCanvasUpdated);
+						rscc.rsCanvas.canvas3d.addEventListener("arcsChanged", onCanvasUpdated);
+						rscc.rsCanvas.canvas3d.addEventListener("linesChanged", onCanvasUpdated);
+						rscc.rsCanvas.canvas3d.addEventListener("rotationChanged", onCanvasUpdated);
+					} 
+				
+				} 
 				else return "Error creating canvas";
 				
 				if (dataElement.hasChildNodes) {
@@ -501,7 +519,7 @@ var DATA_IN_XML = true;
 							var error = populateCanvas(parentContainer, downDataEl, objID);
 							if (!error) {
 								if (parentContainer.rscc && 
-										parentContainer.rscc instanceof RSCanvasContainer && 
+										//parentContainer.rscc instanceof RSCanvasContainer && 
 										parentContainer.rscc.rsCanvas) {
 									var news = parentContainer.rscc.rsCanvas.readNewElements();
 									if (news.length > 0) {
@@ -617,6 +635,7 @@ var DATA_IN_XML = true;
 							for (var i = 0; i < containers.length; i++) {
 								if (containers[i].getAttribute("contains") == "canvas") {
 									if (containers[i].rscc && containers[i].rscc.rsCanvas &&
+											containers[i].rscc.rsCanvas instanceof RSCanvas &&
 											containers[i].rscc.rsCanvas.hasObject(objID)) {
 										
 										elementInCanvas = true;

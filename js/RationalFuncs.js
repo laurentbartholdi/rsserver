@@ -163,13 +163,13 @@ function mergeSettingsObjects (baseObj, newObj) {
 }
 function getConstUniforms (data, keys) {
 	var res = {};
-	console.log("getConstUniforms");
+	//console.log("getConstUniforms");
 	for (var i = 0; i < keys.length; i++){
 		res[keys[i]] = {};
 		res[keys[i]].type = ConfigManager.getFieldValueType(keys[i]);
 		res[keys[i]].value = data[keys[i]] || ConfigManager.getDefaultValue(keys[i]);
 		res[keys[i]].constant = true;
-		console.log(keys[i], res[keys[i]].value);
+		//console.log(keys[i], res[keys[i]].value);
 	}
 	return res;
 }
@@ -273,9 +273,9 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 			value:(jData.cycleperiod ? (jData.cycleperiod.length ? (leastCommonMultiple(jData.cycleperiod) || 1) : 1):1), 
 			constant: true
 	};
-	console.log("cyclePeriod", jData.cycleperiod);
+	//console.log("cyclePeriod", jData.cycleperiod);
 	var juliaColor = jData.config.juliaColor || new THREE.Color(0x999999);
-	console.log("jData ", jData);
+	//console.log("jData ", jData);
 	var juliatestMethods = jData.degree > 1 ? [	
 	"// Color parameters",
 	complexToColorString,
@@ -332,7 +332,7 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 			"  return complex2rgb(n0,d0);", // test sphere color
 			"}"
 			].join("\n");
-console.log(juliatestMethods);	
+//console.log(juliatestMethods, juliatestUniforms);	
 	var juliatestCode = [
 	 	              	"vec3 v = vec3(0.0,0.0,0.0);",
 	 	              	"v = color(c, z, w, scale);",
@@ -342,7 +342,7 @@ console.log(juliatestMethods);
 	 	              ].join("\n");
 	var resMap = new ComplexShaderMap(juliatestCode, false, juliatestUniforms, juliatestMethods);
 	resMap.initData = jData;
-	console.log("data.xml", resMap.initData.xml);
+	//console.log("data.xml", resMap.initData.xml);
 	return resMap;
 
 }
