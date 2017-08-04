@@ -55,4 +55,16 @@ To set a layout for the objects on the page use <template> tag. It should be sen
 
 If an html-templates are applied to a window, in reply to "request" action the objects of the window are not integrated in html, they are sent as a list, applied templates are sent among them (see example). 
 
+FILLING SURFACE OF RIEMANN SPHERE OR COMPLEX PLANE
+
+To fill surface of Riemann sphere (or complex plane) use <downdata> with "populate" as "action" attribute value and canvas id as "object". 
+There to ways to fill a surface: send a rational function data to obtain it's Julia and Fatou sets or send a bitmap. 
+
+To send a bitmap use a <bitmap> tag with <data> and <transform> as childnodes. <data> should contain dataURL for the image. For spherical geometry the image should represent colors corresponding to infinity at the top, to zero in the bottom, to negative imaginary numbers in the sides. For plane geometry the right top corner corresponds to 1+i, left bottom to -1-i. <transform> tag should be present if the image depicts complex plane of sphere with a Moebius transformation applied. If there are no <transform> tag the image is iterpreted as not transformed, if a Moebius transformation is applyed to the sphere or plane, the image would be stretched. 
+
+If the sphere was populated by rational function, it's legend and equation line are generated automatically. Bitmap filling by default gives no legend and equation line. Use <legend> and <equation> tags to set them manully. 
+<downdata> with "populate" as action, canvas id as object and <equation> as child will set the content of <equation> tag to a text line under the canvas. <legend> tag should contain <legendline> tags as children. Each legend line should contain "color" attribute (representing color of a small square) and text or <cn> as content. Text content or string representation of a complex number will be placed next to the colored square. If no "color" attribute is present and the content of the <legendline> is <cn>, the square will be colored to the color, used in shader to represent corresponding complex number. 
+
+<legend> and <bitmap> tags can contain a "name" attribute. By default populating a canvas with bitmap will remove a legend, but if the legend has the same name as the bitmap, it remains. 
+
 
