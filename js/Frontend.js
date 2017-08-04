@@ -7,6 +7,8 @@ var DATA_IN_XML = true;
 		var mCCDOMElement; //The dynamic html-block, to add elements on the commands from the server 
 		var pageDataXML; //XML element to store data about the page structure and send to server by request.
 		var templates = [];
+		
+		var DEBUG = 0;
 		 
 		function pageInit() {
 			//Executes when the html-page is loaded
@@ -39,6 +41,12 @@ var DATA_IN_XML = true;
 			
 			parseQueryStringToXMLAttributes(handshakeData);
 			winID = handshakeData.getAttribute("id");
+			  
+			if (handshakeData.hasAttribute("debug")) {
+				DEBUG = handshakeData.getAttribute("debug");
+				handshakeData.removeAttribute("debug");
+			}
+			console.log(DEBUG, DEBUG == 1);
 			handshakeData = xmlSerializer.serializeToString(handshakeData);
 			console.log("handshakeData", handshakeData);
 			// open connection
@@ -202,6 +210,10 @@ var DATA_IN_XML = true;
 						surfaceData.updateUniformsDeclaration();
 						container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
 						getOutputDomElement(dataObject, container.outputLine, 3);
+					} else if (dataElement.getElementsByTagName("bitmap").length > 0) {
+						var dataObject = new BitmapFillData(dataElement.getElementsByTagName("bitmap")[0]);
+						container.rscc.rsCanvas.updateSphereMaterial(dataObject);
+						container.outputLine.innerHTML = "";
 					}
 					var configElements = dataElement.getElementsByTagName("config");
 					if (configElements.length > 0) {
@@ -210,6 +222,12 @@ var DATA_IN_XML = true;
 							ConfigManager.parseXMLNode(configElements[i], cfg);
 						}
 						container.rscc.updateCanvas(cfg);
+					}
+					var eq = dataElement.getElementsByTagName("equation")[0]; 
+					if (eq) {
+						if (eq.firstChild)
+							container.outputLine.innerHTML = eq.firstChild.nodeValue;
+						else container.outputLine.innerHTML = "";
 					}
 					container.rscc.rsCanvas.parseData(dataElement);
 	

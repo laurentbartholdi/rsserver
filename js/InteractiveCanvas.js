@@ -54,10 +54,19 @@ InteractiveCanvas.prototype = {
 				this.configManager.updateMultiple(materialData.initData.config);
 				this.somethingChanged = true;
 
-			} else {
-				this.object.material.complexTextureImage.update(this, materialData);
-				this.object.material.map.needsUpdate = true;
-			}
+			} else if(materialData instanceof BitmapFillData) {
+				if (!(this.object.material instanceof THREE.MeshLambertMaterial) ) 
+				{this.object.material = new THREE.MeshLambertMaterial()};
+				
+				this.initTextureMaterial(this.object.geometry, materialData, this.object.material);
+				
+				this.object.material.needsUpdate = true;
+				this.somethingChanged = true;
+				if (this.legend.update && !( this.legend.name && 
+						this.object.material.name && 
+						this.object.material.name == this.legend.name)) 
+					this.legend.update();
+			} 
 			
 		},
 		 getFragmentShaderString: function (complexShaderMap) {
@@ -149,7 +158,6 @@ InteractiveCanvas.prototype = {
 	  
 	          },
 	          initShaderMaterial: function(geom, shaderMap) {
-	        	  console.log("initShaderMaterial", shaderMap);
 	        		if (!shaderMap) shaderMap = new ComplexShaderMap();
 	        		this.curShaderMap = shaderMap;
 	        		this.updateComplexAttribute(geom, shaderMap);
@@ -169,7 +177,6 @@ InteractiveCanvas.prototype = {
 	        			  fragmentShader: this.getFragmentShaderString(shaderMap),
 	        			  lights: true
 	        			  });
-	        		console.log(shaderMaterial.fragmentShader);
 	        		shaderMaterial.complexShaderMap = shaderMap;
 	        		return shaderMaterial;
 	        	},
@@ -210,6 +217,116 @@ InteractiveCanvas.prototype = {
 
 	        	},
 	        	
+	        	initTextureMaterial : function (geometry, data, material) {
+	        		if (!(data instanceof BitmapFillData)) return null;
+	        		material = material || new THREE.MeshLambertMaterial();
+	        		var baseTransform = data.baseTransform || MoebiusTransform.identity;
+	        		
+	        		var surfaceTransform = this.getTransform().superpos(baseTransform.invert());
+	        		var loader = new THREE.TextureLoader();
+	        		var that_ = this;
+		      		material.baseTransform = baseTransform;
+	        		if (data.name) material.name = data.name;
+	        		else material.name = undefined;
+	        		loader.load(data.dataURL, function(texture) {
+		      		  texture.wrapS = that_.textureWrapS; //THREE.RepeatWrapping;
+		      		  texture.wrapT = that_.textureWrapT; //THREE.RepeatWrapping;
+		      		  material.map = texture;
+		      		  material.needsUpdate = true;
+		      		  material.map.needsUpdate = true;
+		      		  that_.somethingChanged = true;
+	        			
+	        		});
+	      			 this.updateCustomUVs (geometry, this.getUV, {transform: surfaceTransform});
+	      			 this.somethingChanged = true;
+	      			 return material;
+	        	},
+
+	        	
+
+	        	
+	        	updateCustomUVs : function (geometry, getUVFunc, paramsArg) {
+	        			var posAttr = geometry.getAttribute("position");
+	        	 		var uvAttr = geometry.getAttribute("uv");
+	        	 		var indicies = geometry.getIndex();
+	        	 		
+	        	 		var params = this.getUVOptions(paramsArg.transform);
+	        	 		if (!indicies) {
+	        	     		for (var i = 0; i < posAttr.count; i+=3) {
+	        	     			var uvs = [];
+	        	     			for (var di = 0; di < 3; di++) {
+	        	     				uvs.push(getUVFunc(posAttr.getX(i+di), posAttr.getY(i+di), posAttr.getZ(i+di), params));
+	        	     			}
+	        	     			function checkBound2 (ind, name) {
+	        	 					if (uvs[(ind + 1) % 3][name] - uvs[(ind + 2) % 3][name] > 0.5) {
+	        	 						if (uvs[(ind + 2) % 3][name] > 1 - uvs[(ind + 1) % 3][name]) uvs[(ind + 1) % 3][name] -= 1;
+	        	 						else uvs[(ind + 2) % 3][name] += 1
+	        	 					} else if (uvs[(ind + 1) % 3][name] - uvs[(ind + 2) % 3][name] < -0.5) {
+	        	 						if (uvs[(ind + 1) % 3][name] > 1 - uvs[(ind + 2) % 3][name]) uvs[(ind + 2) % 3][name] -= 1;
+	        	 						else uvs[(ind + 1) % 3][name] += 1     						
+	        	 					}
+	        	     				
+	        	     			}
+	        	     			function getMissing (mainInd, ind, name) {
+	        	     				var p = new THREE.Vector3(posAttr.getX(mainInd + ind), posAttr.getY(mainInd + ind), posAttr.getZ(mainInd + ind));
+	        	     				var p1 = new THREE.Vector3(posAttr.getX(mainInd + (ind + 1) % 3), posAttr.getY(mainInd + (ind + 1) % 3), posAttr.getZ(mainInd + (ind + 1) % 3));
+	        	     				var p2 = new THREE.Vector3(posAttr.getX(mainInd + (ind + 2) % 3), posAttr.getY(mainInd + (ind + 2) % 3), posAttr.getZ(mainInd + (ind + 2) % 3));
+	        	     				
+	        	     				var q = new THREE.Vector3();
+	        	     				q.subVectors(p, p1);
+	        	     				var q2 = new THREE.Vector3();
+	        	     				q2.subVectors(p2, p1);
+	        	     				var ql = q.length();
+	        	     				var q2l = q2.length();
+	        	     				var cos = q.dot(q2)/ql/q2l;
+	        	     				var sin = Math.sqrt(1-cos*cos);
+	        	     				var cv = new THREE.Vector3();
+	        	     				cv.crossVectors(p, p2);
+	        	     				if ( cv.dot(p1) < 0 ) sin = -sin;
+	        	     				var altName = name == "u" ? "v" : "u";
+	        	     				var dU = uvs[(ind + 2) % 3][name] - uvs[(ind + 1) % 3][name];
+	        	     				var dV = uvs[(ind + 2) % 3][altName] - uvs[(ind + 1) % 3][altName];
+	        	     				return uvs[(ind + 1) % 3][name] + ql/q2l*(dU*cos + dV*sin);
+	        	     			}
+	        	     			function checkBound (ind, name) {
+	        	     				var d1 = uvs[ind][name] - uvs[(ind + 1) % 3][name];
+	        	     				var d2 = uvs[ind][name] - uvs[(ind + 2) % 3][name];
+	        	     				if (Math.abs(d1) > 0.5 && Math.abs(d2) > 0.5) {
+	        	     					if (d1 > 0) uvs[ind][name] -= 1;
+	        	     					else uvs[ind][name] += 1;
+	        	     				}
+	        	     			}
+	        	     			
+	        	     			for (var di = 0; di < 3; di ++) {
+	        	     				if (isNaN(uvs[di].u)) {
+	        	     					checkBound2(di, "u");
+	        	     					uvs[di].u = getMissing(i, di, "u");
+	        	     				}
+	        	     				if (isNaN(uvs[di].v)) {
+	        	     					checkBound2(di, "v");
+	        	     					uvs[di].v = getMissing(i, di, "v");
+	        	     				}
+	        	     			}
+	        	     			for (var di = 0; di < 3; di ++) {
+	        	     				checkBound(di, "u");
+	        	     				checkBound(di, "v");
+	        	     				uvAttr.setX(i + di, uvs[ di].u);
+	        	     				uvAttr.setY(i + di, uvs[ di].v);
+	        	     			}
+	        	     		}
+	        	 		} else { //TODO avoid side effects on indexed array
+	        	 			for (var i = 0; i < posAttr.count; i++) {
+	        	 				var uv = getUVFunc(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i), params);
+	        	 				if (isNaN(uv.u)) uv.u = 0;
+	        	 				if (isNaN(uv.v)) uv.v = 0;
+	        	 				uvAttr.setX(i, uv.u);
+	        	 				uvAttr.setY(i, uv.v);
+	        	 			}
+	        	 		}
+	        	 		geometry.attributes.uv.needsUpdate = true;/**/
+	        	},
+	        		
+	        	
 	        	init: function (canvas, materialData, canvasData) {
 	        			this.canvas3d = canvas;
 	        			this.aspect = this.canvas3d.width/this.canvas3d.height;
@@ -224,20 +341,14 @@ InteractiveCanvas.prototype = {
 	        			var sphGeom = this.getObjectGeometry();
 	        			var sphMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 }); 
 	        			if (materialData) { 
-	        				console.log(materialData, materialData instanceof ComplexShaderMap);
 	        				if (materialData instanceof ComplexShaderMap) {
-	        					console.log("ShaderMap created", materialData)
 	        					sphMaterial = this.initShaderMaterial(sphGeom, materialData);
-	        				} else if (materialData instanceof TextureImage){
-	        					console.log("TextureImage", materialData);
-	        					sphMaterial = new THREE.MeshLambertMaterial({
-	        						map : new THREE.Texture(materialData.textureCanvas)
-	        						//map : new THREE.Texture(document.getElementById("test-canvas"))
-	        					});
-	        					sphMaterial.complexTextureImage = materialData;
-	        					sphMaterial.needsUpdate = true;
-	        					sphMaterial.map.needsUpdate = true;
-	        				} else sphMaterial = this.initShaderMaterial(sphGeom);
+	        				} else if(materialData instanceof BitmapFillData) {
+	        					sphMaterial = this.initTextureMaterial(sphGeom, materialData);
+	        				}
+	        				else {
+	        					sphMaterial = this.initShaderMaterial(sphGeom);
+	        				}
 	        			} else {
 	        				sphMaterial = this.initShaderMaterial(sphGeom);
 	        			}
@@ -324,7 +435,7 @@ icp.getSnapshot = function() {
 
 icp.getSnapshotElement = function () {
 	var snapshotXMLObj = createEmptyNode("canvas");
-	spapshotXMLObj.setAttribute("static", "false");
+	snapshotXMLObj.setAttribute("static", "false");
 	if (this.configManager.getConfigValue("reportImage")) {
 		this.somethingChanged = true;
 		this.render();
@@ -335,6 +446,8 @@ icp.getSnapshotElement = function () {
 			if (this.funcXML) {
 				snapshotXMLObj.appendChild(this.funcXML.cloneNode(true));
 			}
+		} else {
+			snapshotXMLObj.appendChild(createEmptyNode("bitmap"));
 		}
 	}
 	return snapshotXMLObj;
@@ -359,6 +472,48 @@ icp.onCanvasResize = function () {
 
 };
 
+icp.getUVOptions = function (tr) {
+	return {transform: tr};
+}
+//------------
+
+BitmapFillData = function (data, transform, name) {
+	if (data instanceof Node) {
+		var dataNode = data.getElementsByTagName("data")[0] || data;
+		for (var i = 0; i < dataNode.childNodes.length; i++) {
+			if (dataNode.childNodes[i].nodeType == 3) this.dataURL = dataNode.childNodes[i].nodeValue;
+		}
+		var trXML =  data.getElementsByTagName("transform")[0]; 
+		if (trXML) {
+			this.baseTransform = MoebiusTransform.fromXML(trXML);
+		} else {
+			this.baseTransform = MoebiusTransform.identity;
+		}
+		var name = dataNode.getAttribute("name");
+		if (name) this.name = name;
+		
+	} else {
+		this.dataURL = data;
+		if (transform instanceof MoebiusTransform)
+			this.baseTransform = transform;
+		else this.baseTransform = MoebiusTransform.identity;
+		if (name) this.name = name;
+	}
+	
+}
+
+BitmapFillData.prototype = {
+		constructor: BitmapFillData,
+		toXML: function () {
+			var res = createEmptyNode("bitmap");
+			var dataNode = createEmptyNode("data");
+			if (this.name) dataNode.addAttribute("name", this.name);
+			dataNode.textContent = this.dataURL;
+			res.appendChild(dataNode);
+			res.appendChild(this.baseTransform.toXML());
+			return res;
+		}
+}
 
 
 

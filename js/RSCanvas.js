@@ -48,6 +48,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	        		movingSelectedPoint = curMarker;
 	        	}
 	        	if (marker_index >= 0 && transformAnchorsValues.length > 1) {
+	        		that.oldTransform = that.currentTransform.copy();
 	        		movingAnchor = curMarker.numInArray;
 	        	}
         	}
@@ -98,6 +99,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 
     }
     
+    this.oldTransform = MoebiusTransform.identity;
     newLinesData = [];
     this.handleMouseUp = function(event) {
         mouseDown = false;
@@ -240,9 +242,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			if (this.sphere.material instanceof THREE.ShaderMaterial){
 				this.updateComplexAttribute(this.sphere.geometry, 
 						this.sphere.material.complexShaderMap);
-			} else if (this.sphere.material.complexTextureImage) {
-				
-				this.updateMaterialMap();
+			} else if (this.sphere.material.map) {
+				var tr;
+				if (this.sphere.material.baseTransform instanceof MoebiusTransform)
+					tr = this.currentTransform.superpos(this.sphere.material.baseTransform.invert());
+				else tr = this.currentTransform.copy();
+				this.updateCustomUVs (this.sphere.geometry, this.getUV, {transform: tr});
 			}
 			updateAnchors();
 			transformDrawings();
@@ -736,7 +741,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					//new THREE.LineBasicMaterial({color: RSCanvas.drawingColor}));
 					new THREE.LineBasicMaterial({color: that.configManager.getConfigValue("lineColor"), 
 						linewidth: that.configManager.getConfigValue("lineWidth")}));
-			console.log("new line", that.configManager.getConfigValue("lineWidth"));
 			drawedLines.push(lastDrawingLine);
 			lastDrawingLine.geometry.vertices.push(pos.clone().multiplyScalar(lineOverTheSphere));
 			while (lastDrawingLine.geometry.vertices.length < maxDrawingBufferSize)
@@ -1128,13 +1132,34 @@ rp.init = function(canvas, materialData, canvasData) {
 };
 
 rp.getObjectGeometry = function () {
-	return new THREE.SphereBufferGeometry(RSCanvas.SPHERE_RADIUS, 128 , 128);
+	//var g = new THREE.SphereGeometry(RSCanvas.SPHERE_RADIUS, 64 , 64);
+	//return new THREE.BufferGeometry().fromGeometry( g );
+	return new THREE.SphereBufferGeometry(RSCanvas.SPHERE_RADIUS, RSCanvas.WIDTH_SEGMENTS , RSCanvas.HEIGHT_SEGMENTS);
 	
 }
 
+RSCanvas.WIDTH_SEGMENTS = 128;
+RSCanvas.HEIGHT_SEGMENTS = 128;
+rp.deltaU = .5/RSCanvas.WIDTH_SEGMENTS;
+rp.deltaV = .5/RSCanvas.HEIGHT_SEGMENTS;
+
+rp.getUV = function (x, y, z, params) {
+	var pos = new THREE.Vector3(x, y, z);
+	params = params || {};
+	var surfaceTransform = params.transform || MoebiusTransform.identity;
+	var c = CU.localToComplex (pos, surfaceTransform);
+	//console.log("inside", params);
+	var sph = CU.projectToSphere(c);
+	var uv = CU.sphericalToUV(sph);
+	return uv;
+};
+
 
 rp.setTransform = function(transform) {
+	this.oldTransform = this.currentTransform.copy();
+
 	this.currentTransform = transform.copy();
+		//console.log(this.currentTransform.toString(), this.currentTransform.getDistance(this.oldTransform), this.oldTransform.getDistance(this.currentTransform));
 	this.updateTransform();
 	this.transformUpdated = true;
 	this.somethingChanged = true;
@@ -1284,17 +1309,11 @@ rp.parseData = function(data) {
 	var arcsParsed = false;
 	
 	var transformData = data.getElementsByTagName("transform")[0];
-	if (transformData) {
-		if (transformData.childNodes.length < 4) {
-			consol.error("Data error. Incorrect 'transform' node.", transformData);
-		};
-		var trarr = [];
-		for (var i = 0; i < 4; i ++)
-			trarr.push(Complex.fromXML(transformData.childNodes[i]));
-		var new_transform = new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
+	if (transformData && transformData.parentNode.nodeName == "downdata") {
+		var new_transform = MoebiusTransform.fromXML(transformData);
 		this.setTransform(new_transform);
 		transformParsed = true;
-		console.log("transform", trarr, new_transform.toString());
+		console.log("transform", new_transform.toString());
 	}
 	
 	var pointsData = data.getElementsByTagName("point");
@@ -1351,6 +1370,7 @@ rp.parseData = function(data) {
 		this.addSelectedPoints(pts, params);
 		pointsParsed = true;
 		console.log("points", pts, params);
+		
 	}
 	
 	var rotationData = data.getElementsByTagName("rotation")[0];
@@ -1509,11 +1529,46 @@ rp.parseData = function(data) {
 		console.log("arcs parsed", this.arcsData);
 		arcsParsed = true;
 	}
+	var legendEl =  data.getElementsByTagName("legend")[0];
+	console.log("legend", legendEl);
+	if (legendEl) {
+		var legendLines = legendEl.getElementsByTagName("legendline");
+		var legendData = [];
+		for (var i = 0; i < legendLines.length; i++) {
+			var value = {};
+			var message = "";
+			var cn = legendLines[i].getElementsByTagName("cn")[0];
+			var cAttr = legendLines[i].getAttribute("color"); 
+			if (cAttr) {
+				value = new THREE.Color(cAttr);
+				if (cn) message = Complex.fromXML(cn).toString();
+				else message = legendLines[i].textContent;
+			} else if (cn) {
+				value = Complex.fromXML(cn);
+			} 
+			value.message = message;
+			legendData.push(value);
+		}
+		
+		if (legendEl.hasAttribute("name"))
+			this.legend.name = legendEl.getAttribute("name");
+		else this.legend.name = undefined;
+		console.log("legend data", data);
+		this.legend.update(legendData);
+		if (legendData.length > 0 && this.configManager.getConfigValue("showLegend")) {
+			this.legend.visible = true;
+			this.updateLegendPosition();
+		}
+	}
+
 	this.newDataLoaded = true;
 	this.somethingChanged = true;
 
 
 };
+
+rp.textureWrapS = THREE.RepeatWrapping;
+rp.textureWrapT = THREE.RepeatWrapping;
 
 
 	

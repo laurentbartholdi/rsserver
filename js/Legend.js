@@ -64,6 +64,7 @@ Legend = function (data, style) {
 	this.update = function(data) {
 		this.clear();
 		fill.call(this, data);
+		console.log(this, "updated", data);
 	}
 	
 	this.updateStyle = function (newStyle) {

@@ -72,6 +72,40 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		imgTag.setAttribute("src", imgData);
 		domElement.appendChild(imgTag);
 	}
+	this.fillBitmap = function(event) {
+		console.log("fill bitmap");
+		var c = document.getElementById("testBitmapCanvas");
+		if (c) {
+			c.parentNode.removeChild(c);
+		}
+		var tr = that.rsCanvas.getTransform();
+		var dataURL = getTestImageData(tr);
+		var dataObject = new BitmapFillData(dataURL, tr, "test");
+		that.rsCanvas.updateSphereMaterial(dataObject);
+		that.rsCanvas.somethingChanged = true;
+		
+		that.rsCanvas.canvas3d.addEventListener("transformChanged", that.fillBitmapContinue);
+	}
+	
+	this.fillBitmapContinue = function (event) {
+			var c = document.getElementById("testBitmapCanvas");
+			if (c) {
+				c.parentNode.removeChild(c);
+			}
+		if (that.rsCanvas.sphere.material.name == "test") {
+			var tr = that.rsCanvas.getTransform();
+			var dataURL = getTestImageData(tr);
+			var dataObject = new BitmapFillData(dataURL, tr, "test");
+			that.rsCanvas.updateSphereMaterial(dataObject);
+			that.rsCanvas.somethingChanged = true;
+			
+		} else {
+			that.rsCanvas.canvas3d.removeEventListener("transformChanged", this.fillBitmapContinue);
+			
+		}
+	}
+	
+	
 	this.updateCanvas = function (configObj) {
 		console.log("updateCanvas", configObj);
 		
@@ -199,11 +233,12 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	td4.setAttribute("valign", "top");
 	
 	var td5 = document.createElement("td");
-	addButton(td5, "Copy image", this.copyImage);
+	//addButton(td5, "Copy image", this.copyImage);
+	addButton(td5, "Fill bitmap", this.fillBitmap);
 	
 	controlsRow.appendChild(td01);
-	controlsRow.appendChild(td4);
-	//controlsRow.appendChild(td5); //uncomment this line to test if getting bitmap data from canvas works.  
+	if (DEBUG > 0) controlsRow.appendChild(td5);
+	else controlsRow.appendChild(td4);
 	controlsRow.appendChild(td3);
 	controlsRow.appendChild(td2);
 	//controlsRow.appendChild(td4);

@@ -251,7 +251,6 @@ var Grid = function(rsCanvasArg) {
 		//var transformPars = getTransformParams(rsCanvas.currentTransform);
 		var t = rsCanvas.currentTransform;
 		var w0 = t.findOpposite(Complex["Infinity"]);
-		//var dRaw = smallRDistance*t.a.mult(t.d).sub(t.b.mult(t.c)).r()/(t.c.r2()+t.d.r2());
 		var dRaw = smallRDistance*t.determinantAbs()/(t.c.r2()+t.d.r2());
 		var res = roundTo10 (dRaw);
 		//res.smallDiv = Math.pow(10,logDfloor);

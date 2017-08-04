@@ -29,12 +29,21 @@ var CU = {
 			if (transform) c = transform.apply(c);
 			return c;
 		},
+		//TODO perhaps not in use any more
 		complexToTexture: function (c, transform) {
-			var uv = sphericalToUV(CU.projectToSphere(c, transform));
+			var uv = CU.sphericalToUV(CU.projectToSphere(c, transform));
 			return new THREE.Vector2(
 					2*textureSize*uv.u, 
 					textureSize*uv.v);
 		},
+		
+		sphericalToUV: function (sph) {
+			var u = 0.5*(sph.phi/Math.PI+1);
+			while (u < 0) u+= 1;
+			while (u > 1) u-=1;
+			return {u: u, v: (sph.theta/Math.PI+.5)};
+		}, 
+
 		getDistance: function (z1, z2) {
 			return Math.sqrt(this.getDistance2(z1, z2));
 		},
@@ -191,6 +200,23 @@ MoebiusTransform.prototype = {
 			return this._determinantAbs;
 		},
 		
+		//returns maximal distortion of sphere surface
+		getMetric: function () {
+			var A = 2*this.determinantAbs()/(this.a.r2() + this.b.r2() + this.c.r2() + this.d.r2());
+			return (1+Math.sqrt(1-A*A))/A;
+			
+		},
+		
+		//relative distortion between this and argument
+		getDistance: function (t) {
+			if (t instanceof MoebiusTransform) {
+				return this.invert().superpos(t).getMetric();
+			} else {
+				console.error("Invalid transform", t);
+				return 0;
+			}
+		},
+		
 		findOpposite: function(z) {
 			var w = this.invert().apply(z);
 			//console.log("findOpposite(" + z.toString(true) + ") w=" + w.toString(true), this.invert().toString());
@@ -210,6 +236,9 @@ MoebiusTransform.prototype = {
 				this.b.equals(Complex["0"]) && 
 				this.c.equals(Complex["0"]);
 		},
+		isLinear: function () {
+			return this.c.equals(Complex["0"]);
+		},
 
 		//for human reading
 		toString : function() {
@@ -219,6 +248,15 @@ MoebiusTransform.prototype = {
 					"c=" + this.c.toString(true) + " " +
 					"d=" + this.d.toString(true);
 			
+			
+		},
+		toXML : function () {
+			var res = createEmptyNode("transform");
+			res.appendChild(this.a.toXMLObj());
+			res.appendChild(this.b.toXMLObj());
+			res.appendChild(this.c.toXMLObj());
+			res.appendChild(this.d.toXMLObj());
+			return res;
 			
 		},
 		//for automatic parsing
@@ -262,6 +300,23 @@ MoebiusTransform.byInitEndVectors = function (z, w) {
 		M.subMatrix(2).determinant());                 
 }
 
+MoebiusTransform.fromXML = function (transformData) {
+	var type = transformData.getAttribute("type");
+	if (type == "identity") return MoebiusTransform.identity;
+	var trarr = [];
+	for (var i = 0; i < transformData.childNodes.length; i ++)
+		trarr.push(Complex.fromXML(transformData.childNodes[i]));
+	if (type == "linear" && trarr.length >= 2) {
+		return new LinearTransform(trarr[0], trarr[1]);
+	} else if (trarr.length >=4) {
+		return new MoebiusTransform(trarr[0], trarr[1], trarr[2], trarr[3]);
+	} else {
+		console.error("Data error. Incorrect 'transform' node.", transformData);
+		return null;
+		
+	}
+
+}
 
 
 MoebiusTransform.identity = 
@@ -283,6 +338,7 @@ LTp.infinityImage = function() {return Complex["Infinity"]};
 LTp.invert = function() {
 	return new LinearTransform(Complex["1"].divBy(this.a), Complex.neg(this.b.divBy(this.a)));
 };
+LTp.isLinear = function() {return true};
 
 //----------------------Test functions--------------------------------------
 function getComplexValueByName (name) {

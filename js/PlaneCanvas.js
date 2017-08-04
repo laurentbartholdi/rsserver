@@ -96,15 +96,35 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
     	that.scale = scale;
 		that.updateLegendPosition();
 		that.transformChanged = true;
+		this.configManager.setConfigValue("scale", scale, true);
 		that.dispatchTransformChangeEvent("scale");
     	
     }
     this.setCenter = function (newCenter) {
     	that.center = newCenter;
+		this.configManager.setConfigValue("centerRe", newCenter.re, true);
+		this.configManager.setConfigValue("centerIm", newCenter.i, true);
 		that.updateLegendPosition();
 
     	that.transformChanged = true;
     	
+    }
+    
+    this.setTransform = function (tr) {
+    	if (!tr || !(tr instanceof MoebiusTransform) || tr.d.equals(Complex["0"])) {
+    		console.warn("Invalid transform" + tr);
+    	} else {
+    		var s, c0;
+    		if (!tr.isLinear()) {
+    			console.warn("Using non linear transformation to transform a plane canvas", tr.toString());
+    			 s = tr.determinantAbs()/tr.d.r2();
+   			} else {
+   				s = tr.a.r()/tr.d.r();
+   			}
+    		c0 = tr.b.divBy(tr.d);
+    		this.setCenter(c0);
+    		this.setScale(s);
+    	}
     }
     
     this.canvas3d.onmousedown = this.handleMouseDown;
@@ -123,6 +143,7 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
     }
     this.getTransformData = function(type) {
     	var res = [];
+    	res.push(this.getTransform().toXML());
     	function getConfigElement(key, value) {
     		var res = createEmptyNode("config");
     		res.setAttribute("key", key);
@@ -130,8 +151,10 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
     		return res;
     	}
     	var scaleEl = getConfigElement("scale", this.scale);
-    	if (type == "scale") 
-    		return scaleEl;
+    	if (type == "scale") {
+	     	res.push(scaleEl);
+	   		return res;
+    	}
 		res.push(
 			getConfigElement("centerRe", this.center.re),
 			getConfigElement("centerIm", this.center.i));
@@ -167,6 +190,23 @@ pp.init = function (canvas, materialData, canvasData)	  {
 	this.createLegend();
 
 }
+
+pp.initTextureMaterial = function (geometry, data, material) {
+	console.log("initTextureMaterial", data.baseTransform);
+	if (!(data instanceof BitmapFillData)) return null;
+	if ( data.baseTransform && !(data.baseTransform.isLinear())) {
+		console.warn("Using non linear transform for filling plane canvas", data.baseTransform.toString());
+		if (data.baseTransform.d.equals(Complex["0"])) data.baseTransform = MoebiusTransfrom.identity;
+		else {
+			var s = data.baseTransform.determinantAbs()/data.baseTransform.d.r2();
+			var b = data.baseTransform.b.divBy(data.baseTransform.d);
+			data.baseTransform = new LinearTransform(new Complex(s, 0), b);
+		}
+		
+	}
+	InteractiveCanvas.prototype.initTextureMaterial.call(this, geometry, data, material);
+}
+
 
 pp.getObjectGeometry = function () {
 	return new THREE.PlaneBufferGeometry(PlaneCanvas.internalWidth, 
@@ -207,12 +247,23 @@ pp.parseData = function (data) {
 	} 
 	if (this.configManager.getConfigValue("scale") != this.scale)
 		this.setScale(this.configManager.getConfigValue("scale"));
+	var trElement = data.getElementsByTagName("transform")[0];
+	if (trElement && trElement.parentNode.nodeName == "downdata") {
+		this.setTransform(MoebiusTransform.fromXML(trElement));
+	}
 }
 
 pp.updateVertices = function () {
 	if (this.object.material instanceof THREE.ShaderMaterial){
 		this.updateComplexAttribute(this.object.geometry, 
 				this.object.material.complexShaderMap);
+	} else if (this.object.material.map) {
+		var tr;
+		if (this.object.material.baseTransform instanceof MoebiusTransform){
+			tr = this.getTransform().superpos(this.object.material.baseTransform.invert());
+			console.log("update vertices " + this.object.material.baseTransform + " " + tr);}
+		else tr = this.getTransform();
+		this.updateCustomUVs(this.object.geometry, this.getUV, {transform: tr});
 	}
 }
 
@@ -235,6 +286,45 @@ pp.getSnapshotElement = function() {
 	}
 	return snapshotXMLObj;
 };
+
+pp.getTransform = function () {
+	//if (this.currentTransform) return this.currentTransform.copy();
+	this.currentTransform = new LinearTransform(new Complex(this.scale, 0), this.center);
+	return this.currentTransform;
+}
+
+pp.getUVOptions = function (tr) {
+	var params = InteractiveCanvas.prototype.getUVOptions.call(this, tr);
+	if (params.transform instanceof LinearTransform || (params.transform instanceof MoebiusTransform && params.transform.isLinear())) {
+		params.scale = params.transform.a.r()/params.transform.d.r();
+		params.centerRe = params.transform.b.re/params.transform.d.r();
+		params.centerIm = params.transform.b.i/params.transform.d.r();
+	} else {
+		params.scale = 1;
+		params.centerRe = 0;
+		params.centerIm = 0;
+	}
+	return params;
+	
+}
+
+pp.getUV = function (x, y, z, params) {
+	params = params || {};
+	var uv;
+	if (params.hasOwnProperty("scale") && params.hasOwnProperty("centerRe") && params.hasOwnProperty("centerIm")){
+	uv = {u : 0.5*(params.centerRe + 2*x*params.scale / PlaneCanvas.internalWidth + 1),
+			v : 0.5*(params.centerIm + 2*y*params.scale / PlaneCanvas.internalWidth + 1)}
+	} else {
+		uv = {u : x*PlaneCanvas.internalWidth + 0.5, v : y*PlaneCanvas.internalWidth + 0.5}
+	}
+	
+	return uv;
+};
+
+pp.textureWrapS = THREE.ClampToEdgeWrapping;
+pp.textureWrapT = THREE.ClampToEdgeWrapping;
+
+
 
 var PCLegendLabel = function (message, style) {
 	this.style = style || {};
@@ -302,7 +392,6 @@ var PCLegendLabel = function (message, style) {
 	this.getHeight = function () {
 		return this._h;
 	}
-	
 }
 PCLegendLabel.prototype = Object.create(THREE.Mesh.prototype);
 
