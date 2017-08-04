@@ -28,7 +28,10 @@
 <!ATTLIST config
 	  key CDATA #REQUIRED value CDATA #REQUIRED>
 
-<!ELEMENT bitmap (#CDATA)>
+<!ELEMENT bitmap (#CDATA | (data, transform?))>
+<!ATTLIST bitmap
+	name CDATA #IMPLIED>
+<DATA #CDATA> <!--dataURL for bitmap fill-->
 
 <!ELEMENT point (cn|sp, label?)>
 <!ATTLIST point
@@ -81,12 +84,19 @@
 	  x CDATA #IMPLIED y CDATA #IMPLIED z CDATA #IMPLIED
 	  theta CDATA #IMPLIED phi CDATA #IMPLIED>
 
+<!ELEMENT legend (legendline*)>
+<!ATTLIST legend
+	name CDATA #IMPLIED>
+<!ELEMENT legendline (cn | CDATA)>
+<!ATTLIST legendline
+	color CDATA #IMPLIED>
+
 <!ELEMENT updata ((point|arc|button)|(transform?, rotation?, point*, line*, arc*)) >
 <!ATTLIST updata
 	  status (created|updated|removed|button-click|error|info) "updated"
 	  session IDREF #REQUIRED>
 
-<!ELEMENT downdata ((window|canvas|button|text|function|bitmap|point|arc|template)|(transform?, rotation?, point*, line*, arc*, config*))>
+<!ELEMENT downdata ((window|canvas|button|text|function|bitmap|point|arc|template)|(transform?, rotation?, point*, line*, arc*, config*, legend?, equation?))>
 <!ATTLIST downdata
 	  action (create|populate|remove|request) "create"
 	  object IDREF #REQUIRED <!--for "create" action this is a parent object (window or canvas), for "remove", "populate" or "request" - requested object--> 
@@ -97,8 +107,12 @@
   	replace (true|false) false>
 
 <!ELEMENT transform (cn)>
-<!-- must have exactly 4 children, they will be interpreted as
-     coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3)
+<!ATTLIST transform
+	type ("general"|"linear") "general"
+>
+<!-- if type is "general" (or omitted) transform tag must have exactly 4 children, they will be interpreted as
+     coeffeciens of Moebius transformation: (cn_0*z + cn_1)/(cn_2*z+cn_3);
+     if type is "linear" the number of children must be two, cn_0*z + cn_1
   -->
 <!ELEMENT rotation EMPTY>
 <!ATTLIST rotation
