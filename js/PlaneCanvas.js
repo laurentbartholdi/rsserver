@@ -59,7 +59,7 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
 
     	if (dragging) {
     		move ({x: event.clientX, y: event.clientY});
-    		that.dispatchTransformChangeEvent("move");
+    		that.dispatchTransformChangeEvent("move", true);
 
     	}
         dragging = false;
@@ -82,25 +82,25 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
     this.trnasformChanged = false;
     this.handleWheel = function (event) {
     	if (!that.transformChanged && event.deltaY) {
-    		that.zoom(event.deltaY);
+    		that.zoom(event.deltaY, true);
      	}
     }
     
-    this.zoom = function (dir) {
+    this.zoom = function (dir, ui) {
 		var s = that.scale *(1+PlaneCanvas.scaleStep*(dir > 0 ? 1 : -1));
-		that.setScale(s);
+		that.setScale(s, ui);
     	
     }
-    this.setScale = function (scale) {
+    this.setScale = function (scale, ui) {
     	
     	that.scale = scale;
 		that.updateLegendPosition();
 		that.transformChanged = true;
 		this.configManager.setConfigValue("scale", scale, true);
-		that.dispatchTransformChangeEvent("scale");
+		that.dispatchTransformChangeEvent("scale", ui);
     	
     }
-    this.setCenter = function (newCenter) {
+    this.setCenter = function (newCenter, ui) {
     	that.center = newCenter;
 		this.configManager.setConfigValue("centerRe", newCenter.re, true);
 		this.configManager.setConfigValue("centerIm", newCenter.i, true);
@@ -134,10 +134,12 @@ var PlaneCanvas = function(canvas, materialData, canvasData) {
     this.canvas3d.onmouseleave = function() {window.onwheel = null};
     this.canvas3d.onmouseenter = function() {window.onwheel = function() {return false}} 
     
-    this.dispatchTransformChangeEvent = function (type) {
+    this.dispatchTransformChangeEvent = function (type, ui) {
     	if(this.configManager.getConfigValue("reportTransform")) {
 	    	type = type || "scale";
-	    	this.canvas3d.dispatchEvent( new CustomEvent("transformChanged", {detail:{action: "updated", object: that.serverId, 
+	    	var uiattr = false;
+	    	if (ui) uiattr = true
+	    	this.canvas3d.dispatchEvent( new CustomEvent("transformChanged", {detail:{action: "updated", object: that.serverId, ui: uiattr, 
 	    			data: that.getTransformData(type)}}));
     	}
     }
@@ -192,7 +194,6 @@ pp.init = function (canvas, materialData, canvasData)	  {
 }
 
 pp.initTextureMaterial = function (geometry, data, material) {
-	console.log("initTextureMaterial", data.baseTransform);
 	if (!(data instanceof BitmapFillData)) return null;
 	if ( data.baseTransform && !(data.baseTransform.isLinear())) {
 		console.warn("Using non linear transform for filling plane canvas", data.baseTransform.toString());
@@ -260,8 +261,7 @@ pp.updateVertices = function () {
 	} else if (this.object.material.map) {
 		var tr;
 		if (this.object.material.baseTransform instanceof MoebiusTransform){
-			tr = this.getTransform().superpos(this.object.material.baseTransform.invert());
-			console.log("update vertices " + this.object.material.baseTransform + " " + tr);}
+			tr = this.getTransform().superpos(this.object.material.baseTransform.invert());}
 		else tr = this.getTransform();
 		this.updateCustomUVs(this.object.geometry, this.getUV, {transform: tr});
 	}
