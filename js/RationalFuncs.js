@@ -203,6 +203,9 @@ var ComplexShaderMap = function (code, polar, uniforms, methods) {
 	this.updateUniformsDeclaration = function() {
 		this.uniformsDeclaration = getUniformsDeclaration(this.uniforms);
 	};
+	this.copy = function() {
+		return new ComplexShaderMap(this.code, this.polar, this.uniforms, this.methods);
+	}
 
 };
 
@@ -261,7 +264,7 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	var checkJulia = settings.hasOwnProperty("checkJulia") ? settings.checkJulia : true;
 	var jData = {};
 	if (oldMap) mergeSettingsObjects(jData, oldMap.initData);
-	parseJuliaData(dataStructure, jData);
+	if (dataStructure.length > 0) parseJuliaData(dataStructure, jData);
 	if (!jData.hasOwnProperty("config")) jData.config = {};
 	mergeSettingsObjects(jData.config, settings);
 	
@@ -275,7 +278,6 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	};
 	//console.log("cyclePeriod", jData.cycleperiod);
 	var juliaColor = jData.config.juliaColor || new THREE.Color(0x999999);
-	//console.log("jData ", jData);
 	var juliatestMethods = jData.degree > 1 ? [	
 	"// Color parameters",
 	complexToColorString,
@@ -342,7 +344,20 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	 	              ].join("\n");
 	var resMap = new ComplexShaderMap(juliatestCode, false, juliatestUniforms, juliatestMethods);
 	resMap.initData = jData;
-	//console.log("data.xml", resMap.initData.xml);
 	return resMap;
 
+}
+
+function updateJuliaMap (oldMap, configManager) {
+	if (!oldMap instanceof ComplexShaderMap) {
+		console.warn("Inavalid complex shader map", odlMap);
+		oldMap = new ComplexShaderMap();
+	}
+	if (! configManager instanceof ConfigManager) {
+		console.warn("Invalid configManager", configManager);
+		return oldMap;
+	}
+	
+	return initJuliaMap([], oldMap, configManager.configObj);
+	
 }

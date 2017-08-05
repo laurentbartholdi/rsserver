@@ -42,6 +42,7 @@ InteractiveCanvas.prototype = {
 				if (rebuildShader) {
 					this.object.material.fragmentShader = this.getFragmentShaderString(materialData);
 					this.object.material.needsUpdate = true;
+					this.object.material.complexShaderMap = materialData;
 				} else {
 					for (var s in materialData.uniforms) {
 						if (!ComplexShaderMap.uniformsTypesMap[materialData.uniforms[s].type].array) {
@@ -397,6 +398,7 @@ InteractiveCanvas.prototype = {
 	        			var canvasFormatChanged = false;
 	        			var legendChanged = false;
 	        			var styleChanged = false;
+	        			var shaderChanged = false;
 	        			for (var f in newConfig)
 	        				if (newConfig.hasOwnProperty(f)) {
 	        					if (ConfigManager.checkFieldType(f) == "canvasFormat")
@@ -405,11 +407,19 @@ InteractiveCanvas.prototype = {
 	        						legendChanged = true;
 	        					if (ConfigManager.checkFieldType(f) == "style")
 	        						styleChanged = true;
+	        					if (ConfigManager.checkFieldType(f) == "shader")
+	        						shaderChanged = true;
 	        				}
-	        			if (canvasFormatChanged || styleChanged) {
+	        			if (canvasFormatChanged || styleChanged || shaderChanged) {
 	        				this.configManager.updateMultiple(newConfig);
 	        				if (this.legend && legendChanged) this.updateLegendPosition();
 	        				this.render();
+	        			} 
+	        			if (shaderChanged && this.object.material instanceof THREE.ShaderMaterial) {
+	        				if(this.object.material.complexShaderMap instanceof ComplexShaderMap) {
+	        					var newMap = updateJuliaMap(this.object.material.complexShaderMap, this.configManager);
+	        					this.updateSphereMaterial(newMap, true);
+	        				}
 	        			}
 	        			configParsed = true;
 	        		}

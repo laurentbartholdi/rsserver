@@ -189,7 +189,7 @@ function parseJuliaData(data, resObj) {
 	if (!cyclesParsed) console.warn("No CYCLES entry");
 	if (!configParsed) console.warn("No CONFIG entry");
 	//if (!imageParsed) console.warn("No IMAGE entry");
-	addInfoField(res);
+	if (functionParsed) addInfoField(res);
 	console.log("Julia data parsed", res);
 	
     
