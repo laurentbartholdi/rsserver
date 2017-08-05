@@ -18,7 +18,7 @@ var Grid = function(rsCanvasArg) {
 			permanentLabels.push(new RSTextLabel(Grid.permanentLabelsData[j].value, rsCanvas, {message: Grid.permanentLabelsData[j].text} ));
 		}
 		for (var jj = 0; jj < Grid.staticAbsValues.length; jj++) {
-			Grid.absValueLabelStyle.message = Grid.staticAbsValues[jj];
+			Grid.absValueLabelStyle.message = "|z|=" +Grid.staticAbsValues[jj];
 			permanentLabels.push(new RSTextLabel(Complex.Polar(Grid.staticAbsValues[jj], 0.25*Math.PI), rsCanvas, Grid.absValueLabelStyle));
 			
 		}
@@ -227,7 +227,7 @@ var Grid = function(rsCanvasArg) {
 		lineLabels[index].show();
 		lineLabels[index].setValue(c);
 		if (isAbs) 
-			lineLabels[index].updateLabelText(Complex.toSmartStringComponent(val1, lineLabels[index].style.precision));//Grid.absValueDynamicLabelStyle.precision));
+			lineLabels[index].updateLabelText("|z|=" + Complex.toSmartStringComponent(val1, lineLabels[index].style.precision));//Grid.absValueDynamicLabelStyle.precision));
 		for (var j = 0; j < permanentLabels.length; j++) {
 			lineLabels[index].checkCollision(permanentLabels[j]);
 		}
