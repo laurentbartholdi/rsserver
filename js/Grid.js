@@ -124,6 +124,7 @@ var Grid = function(rsCanvasArg) {
 	//TODO move to config
 	var dynamicGridSmallLinesNum = 10;
 	var smallRDistance = Math.PI/20;
+	var smallAbsRDistance = Math.PI/8;
 	var dynamicAbsGridSmallLinesNum = 30;
 	var reImLinesNum = 0;
 	//var absLinesNum = 0;
@@ -276,12 +277,14 @@ var Grid = function(rsCanvasArg) {
 		
 		res.beta = Math.sqrt(rac*rbd/t.determinant().r2()-1);
 		res.alpha = rac/t.determinantAbs();
-		var drho0 = getDRho(rho0, smallRDistance, res.alpha, res.beta);
-		res.rhoMin = roundTo10(smallRDistance/res.alpha*(1+res.beta*res.beta)/(1+0.5*smallRDistance*res.beta)).smallDiv;
-		res.rhoMax = roundTo10(1/res.alpha*(res.beta + 2/smallRDistance)).smallDiv;
+		var drho0 = getDRho(rho0, smallAbsRDistance, res.alpha, res.beta);
+		//res.rhoMin = roundTo10(0.5*smallAbsRDistance/res.alpha*(1+res.beta*res.beta)/(1+0.5*smallAbsRDistance*res.beta)).smallDiv;
+		//res.rhoMax = roundTo10(1/res.alpha*(res.beta + 2/smallAbsRDistance)).smallDiv;
+		res.rhoMin = 0.5*smallAbsRDistance/res.alpha*(1+res.beta*res.beta)/(1+0.5*smallAbsRDistance*res.beta);
+		res.rhoMax = 1/res.alpha*(res.beta + 2/smallAbsRDistance);
 		var step0 = roundTo10(drho0).smallDiv;
 		var start = roundTo(rho0, step0);
-		res.values.push(res.rhoMin,start-step0,start, start+step0, res.rhoMax);
+		res.values.push(start-step0,start, start+step0);
 		res.phi0 = t.a.mult(Complex.conj(t.c)).add(t.b.mult(Complex.conj(t.d))).t();
 		addDynamicAbsValues(start, step0, res, 1);
 		addDynamicAbsValues(start, step0, res, -1);
@@ -295,7 +298,7 @@ var Grid = function(rsCanvasArg) {
 		while (i++ < dynamicAbsGridSmallLinesNum && currRho > res.rhoMin && 
 				currRho < res.rhoMax && 
 				res.values.length <= 2*dynamicAbsGridSmallLinesNum ) {
-			newStep = roundTo10(getDRho(currRho, smallRDistance, res.alpha, res.beta)).smallDiv;
+			newStep = roundTo10(getDRho(currRho, smallAbsRDistance, res.alpha, res.beta)).smallDiv;
 			if (Math.abs(roundTo(currRho, newStep) - currRho) < 0.0001*newStep) {
 				step = newStep;
 			}
