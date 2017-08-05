@@ -285,11 +285,11 @@ Actions on web UI
 ----------------------------------------------------------------------------
 
 User clicks the button 'button0'
-Web->TCP <updata session='s1' status='button-click' object='button0'/>
+Web->TCP <updata session='s1' status='button-click' ui='true' object='button0'/>
 
 User has added a point: 
 Web->TCP
-<updata session="s1" status="created" object="canvas0">
+<updata session="s1" status="created" ui="true" object="canvas0">
 	<point id="canvas0UIpoint1" canvas="canvas0">
 		<cn re="1.3302203016807654" im="-1.3189376605521121" r="1.8732545484867626"/>
 	</point>
@@ -297,7 +297,7 @@ Web->TCP
 
 User has moved a point: 
 Web->TCP 
-<updata session="s1" status="updated" object="canvas0">
+<updata session="s1" status="updated" ui="true" object="canvas0">
 	<point id="canvas0UIpoint0" canvas="canvas0" movable="true">
 		<cn re="1.2589972606891076" im="-0.17267385291220938" r="1.2707833654491327"/>
 	</point>
@@ -305,32 +305,32 @@ Web->TCP
 
 User has removed a point:
 Web->TCP
-<updata session="s1" status="removed" object="canvas0UIpoint0"/>
+<updata session="s1" status="removed" ui="true" object="canvas0UIpoint0"/>
 
 User has drawn a line
 Web->TCP
-<updata session="s1" status="created" object="canvas0UIline0">
+<updata session="s1" status="created" ui="true" object="canvas0UIline0">
 	<line id="canvas0UIline0" canvas="canvas0">
 		<cn re="0.16478563291654094" im="0.3004821811601285" r="0.34270081121942686" t="1.069179270233213"/>
 		[all points of the line]
 	</line>
 </updata>
 
-User has removed a line ("Clear drawings" button)
+User has removed a line 
 Web->TCP
-<updata session="s1" status="removed" object="canvas0UIline0"/>
-<updata session="s1" status="removed" object="canvas0UIline1"/>
+<updata session="s1" status="removed" ui="true" object="canvas0UIline0"/>
+<updata session="s1" status="removed" ui="true" object="canvas0UIline1"/>
 (Ack is sent about each line separately)
 
 User has rotated the sphere
 Web->TCP 
-<updata session="s1" status="updated" object="canvas0">
+<updata session="s1" status="updated" ui="true" object="canvas0">
 	<rotation x="1.8168817964372586" y="-0.34613175084056025" z="0.09053054958506236" order="XYZ"/>
 </updata>
 
 User has transformed the sphere
 Web->TCP
-<updata session="s1" status="updated" object="canvas0">
+<updata session="s1" status="updated" ui="true" object="canvas0">
 	<transform>
 		<cn re="0.5523225030131864" im="-0.6112080888938083"/>
 		<cn re="0.23396703696778925" im="0.3708035578640365" r="0.438447092489065"/>
