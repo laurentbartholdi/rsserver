@@ -181,6 +181,7 @@ var DATA_IN_XML = true;
 			if (event.detail) {
 				updata.setAttribute("status", event.detail.action || "updated");
 				updata.setAttribute("object", event.detail.object);
+				if (event.detail.ui) updata.setAttribute("ui", "true");
 				if (Array.isArray(event.detail.data))
 					for (var i = 0; i < event.detail.data.length; i ++)
 						updata.appendChild(event.detail.data[i]);
@@ -462,7 +463,7 @@ var DATA_IN_XML = true;
 								newBtn.addEventListener(
 										"click", 
 										function (event) {
-											sendData({data: "<updata status='button-click' object='" + elID + "'/>"});
+											sendData({data: "<updata status='button-click' ui='true' object='" + elID + "'/>"});
 										}, 
 										true);
 								newContainer.appendChild(newBtn);
@@ -528,7 +529,7 @@ var DATA_IN_XML = true;
 				
 				var action = downDataEl.getAttribute("action");
 				var objID = downDataEl.getAttribute("object");
-				if (!objID && action == "remove") {window.close();}
+				if (!objID && action == "remove") {window.close();}//TODO ststus ok
 				else {
 					var parentContainer = null;
 					if (objID && (parentContainer = document.getElementById(objID))) {
@@ -543,7 +544,7 @@ var DATA_IN_XML = true;
 									if (news.length > 0) {
 										resEl.setAttribute("status", "created");
 										resEl.setAttribute("object", objID);
-										
+										//TODO status ok
 										for (var ii = 0; ii< news.length; ii++)
 											resEl.appendChild(news[ii]);
 										sendData({data:xmlSerializer.serializeToString(resEl)});
@@ -556,6 +557,7 @@ var DATA_IN_XML = true;
 	
 						} else if (action == "remove") {
 							parentContainer.parentNode.removeChild(parentContainer);
+							//TODO status ok
 							sendData({data:"<updata status='removed' object='" + objID + "'/>"}); 
 						} else if (action == "populate" || action == "update") {
 							var type = parentContainer.getAttribute("contains");
@@ -597,6 +599,7 @@ var DATA_IN_XML = true;
 										}
 									}
 									if (!error) {
+										//TODO status ok
 										resEl.setAttribute("status", "updated");
 										resEl.setAttribute("object", objID);
 										if (type != "canvas") getElementInfo(container, resEl);
@@ -640,6 +643,7 @@ var DATA_IN_XML = true;
 								if (error) {
 									sendError(error);
 								} else {
+									//TODO status ok
 									resEl.setAttribute("status", "created");
 									sendData({data:xmlSerializer.serializeToString(resEl)});
 								}

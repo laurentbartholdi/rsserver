@@ -67,14 +67,14 @@ var RSCanvas = function(canvas, materialData, canvasData) {
     	var its = that.converter.getIntersects(dblclickPos);
     	if (its.length) {
     		if (its[0].object.marker) {
-    			removeAnchor (its[0].object.marker);
+    			removeAnchor (its[0].object.marker, {ui: true});
     			
     			
     		} else {
     			for (var i = 0; i < its.length; i ++) {
     				if (its[i].object == that.sphere) {
 		    			if (event.shiftKey) {
-		    				addSelectedPointAnchor(that.sphere.worldToLocal(its[i].point));
+		    				addSelectedPointAnchor(that.sphere.worldToLocal(its[i].point), {ui: true});
 		    			} else {
 		    				addAnchor(dblclickPos);
 		    			}
@@ -120,12 +120,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	
         
         if (rotating && rotationChanged && that.configManager.getConfigValue("reportRotation") && movingAnchor < 0) {
-        	that.canvas3d.dispatchEvent(new CustomEvent("rotationChanged", {detail: {data: that.getRotationElement(), object: that.serverId}}));
+        	that.canvas3d.dispatchEvent(new CustomEvent("rotationChanged", {detail: {data: that.getRotationElement(), object: that.serverId, ui: true}}));
         }
         rotating = false;
         rotationChanged = false;//prevents dispatching an event when the sphere was not actually rotated
        if(movingAnchor >= 0 && that.configManager.getConfigValue("reportTransform")) {
-            	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: that.getTransformElement(), object: that.serverId}}));       		
+            	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: that.getTransformElement(), object: that.serverId, ui: true}}));       		
         	}
         movingAnchor = -1;
         if (movingSelectedPoint) { 
@@ -135,7 +135,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 	        				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", 
 	        						{detail: {action: "updated", 
 	        							object: that.serverId,
-	        							data: that.getSnapshotObjectElement("point", selectedPointsData[i])}}));
+	        							data: that.getSnapshotObjectElement("point", selectedPointsData[i]),
+	        							ui: true}}));
 	        		}
         	} 
         }
@@ -156,7 +157,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
             		that.canvas3d.dispatchEvent( new CustomEvent("linesChanged", 
     					{detail: {action: "created", 
     						object: that.serverId,
-    						data: eventData}}));
+    						data: eventData,
+    						ui: true}}));
             	}
             	
             }
@@ -918,12 +920,12 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			} else {selectedPointsCount ++;}
 		}
 		if ((that.selectedPointsLimit == undefined || that.selectedPointsLimit < 0) || selectedPointsCount < that.selectedPointsLimit) {
-			if (firstHiddenPointIndex >= 0 && !pars) {
+			if (firstHiddenPointIndex >= 0 && (!pars || pars.ui)) {
 				spa = selectedPointsAnchors[firstHiddenPointIndex];
 				spa.show();
 				spa.setPosition(pos);
 			}  else {
-				if (pars) {
+				if (pars && !pars.ui) {
 					var argParameters = {};
 					if (pars.color) {
 						if (pars.color.substr(0, 2) == "0x") pars.color = "#" + pars.color.substr(2-pars.color.length, pars.color.length-2);
@@ -949,7 +951,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 			that.addNewElement(that.getSnapshotObjectElement("point", pars));
 
 			if (!that.muteChangeSelectedPointsEvent)
-				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "created", object: that.serverId, data: that.readNewElements()}}));
+				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "created", object: that.serverId, data: that.readNewElements(), ui: pars.ui}}));
 			that.grid.checkLabelCollisions(spa);
 
 		}
@@ -968,7 +970,7 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		res.borderColor = {r: Math.round(bc.r*255), g: Math.round(bc.g*255),b: Math.round(bc.b*255), a: 1. };
 		return res;
 	}
-	function removeAnchor (pm) {
+	function removeAnchor (pm, params) {
 		if (pm.numInArray !== undefined) {
 			var na = pm.numInArray;
 			transformAnchorsValues.splice(na, 1);
@@ -990,7 +992,9 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 					selectedPointsData.splice(j--, 1);
 				}
 			if (curId) {
-				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "removed", object: curId}}));
+				var ui = false;
+				if (params && params.ui) ui = true;
+				that.canvas3d.dispatchEvent( new CustomEvent("selectedPointsChanged", {detail: {action: "removed", object: curId, ui: ui}}));
 			}
 
 			
