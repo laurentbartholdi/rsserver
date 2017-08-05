@@ -108,7 +108,13 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	
 	this.updateCanvas = function (configObj) {
 		console.log("updateCanvas", configObj);
-		
+		if (configObj.hasOwnProperty("showControls")) {
+			if (configObj.showControls) {
+				controlsRow.removeAttribute("style");
+			} else {
+				controlsRow.setAttribute("style", "display:none");
+			}
+		}
 		if (configObj.width) {
 			this.canvasWidth = configObj.width;
 			var cellWidth = this.canvasWidth;// + 12;
@@ -242,6 +248,10 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	controlsRow.appendChild(td3);
 	controlsRow.appendChild(td2);
 	//controlsRow.appendChild(td4);
+	
+	if (!this.configManager.getConfigValue("showControls")) {
+		controlsRow.setAttribute("style", "display:none");
+	}
 	
 	
 	hideGLControls();
