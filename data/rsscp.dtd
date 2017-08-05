@@ -94,6 +94,7 @@
 <!ELEMENT updata ((point|arc|button)|(transform?, rotation?, point*, line*, arc*)) >
 <!ATTLIST updata
 	  status (created|updated|removed|button-click|error|info) "updated"
+	  ui (true|false) "false"
 	  session IDREF #REQUIRED>
 
 <!ELEMENT downdata ((window|canvas|button|text|function|bitmap|point|arc|template)|(transform?, rotation?, point*, line*, arc*, config*, legend?, equation?))>
