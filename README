@@ -22,54 +22,150 @@ CANVAS UI
 
 Click and drag to rotate the sphere.
 
-For Moebius transformation, double-click somewhere on the sphere surface to add a reference point. (In current design the reference point for Moebius transformations looks like a green diamond) Double-click a reference point to remove it. Drag a reference point to apply the transformation moving this point to the new place and living the other reference points unchanged. It's also possible to use only two points for Moebius transformation: if you move one of the points, the second point and it's opposite will be unchanged. The button "Reset transformation" make the transformation applyed to the sphere's surface, identical. The button "Clear reference points" removes all reference points, but leaves the transformation unchanged.
+To specify a Moebius transformation, double-click somewhere on the
+sphere surface to add a reference point (In the current design the
+reference point for Moebius transformations looks like a green
+diamond). Double-click a reference point to remove it. Drag a
+reference point to apply the transformation moving this point to the
+new place, leaving the other reference points unchanged. It's also
+possible to use only two points for a Moebius transformation: if you
+move one of the points, the second point and its antipode will be
+unchanged. The button "Reset transformation" resets the transformation
+applied to the sphere's surface to the identity. The button "Clear
+reference points" removes all reference points, but leaves the
+transformation unchanged.
 
-Press Ctrl key, then right-press and drag mouse around to draw a line on the sphere's surface. Press Ctrl and left-click to delete the last drawn line. When the If there are new lines on the sphere, the message to the server is sent when the Ctrl key is released .
+Press the Ctrl key, then right-press and drag the mouse around to draw
+a line on the sphere's surface. Press Ctrl and left-click to delete
+the last drawn line. If there are new lines on the sphere, the message
+to the server is sent when the Ctrl key is released.
 
-
-Shift-double-click to create a point on the sphere. (In current design a point looks like a pink ball with a flag with number on it) The point is dragable. Shift-double-click on a point to remove it.
+Shift-double-click to create a point on the sphere. (In the current
+design a point looks like a pink ball with a flag with number on it)
+The point is dragable. Shift-double-click on a point to remove it.
 
 GRID AND LABELS ON THE SPHERE
 
-There are two types of grid on the sphere: constant absolute value lines (red in current design) and constant real and imaginary part lines (green). Both grids has the lines that are always visible (0.1, 0.5, 1, 2, 10 absolute values, these labels are light red, -1, 0 and 1 for real and imaginary parts, green) and lines depending on transformation applyed ("dynamic grid"). All type of grid lines can have labels. Besides that there labels that are always present: 0, 1, i, -1, -i and infinity, they are also green. To show and hide grids and labels use "Grid and labels" control set.
-One can show or hide grids and labels through user interface (a set of checkboxes "Grid and labels") or sending <config> through the server. For example, <config key="showGrid" value="false"/> hides all constant Re and Im part lines. 
+There are two types of grid on the sphere: constant absolute value
+lines (red in the current design) and constant real and imaginary part
+lines (green). Both grids have the lines that are always visible (0.1,
+0.5, 1, 2, 10 absolute values, these labels are light red, -1, 0 and 1
+for real and imaginary parts, green) and lines depending on the
+transformation applied ("dynamic grid"). All type of grid lines can
+have labels. Besides that there labels that are always present: 0, 1,
+i, -1, -i and infinity, they are also green. To show and hide grids
+and labels use the "Grid and labels" control set.  One can show or
+hide grids and labels through user interface (a set of checkboxes
+"Grid and labels") or sending <config> through the server. For
+example, <config key="showGrid" value="false"/> hides all constant Re
+and Im part lines.
 
-When the Fatou and Julia sets of a rational function are drawn on the sphere's surface, the formula of this function is shown below the canvas and controls. 
-Meanings of the colors are described in a legend. The numbers to show are read from the <cycle> entries of the <function>. Use 	"legendMarkerSize", "legendPosition" and "legendTextColor"
-config values to change legend's appearance and "showLegend" to switch it on and off. "legendMarkerSize" is size of a colored square in pixels, "legendPosition" controls in which corner of the canvas legend is shown ("lt" for left-top, "rt", "lb" or "rb" for others).
- 
+When the Fatou and Julia sets of a rational function are drawn on the
+sphere's surface, the formula of this function is shown below the
+canvas and controls.  Meanings of the colors are described in a
+legend. The numbers to show are read from the <cycle> entries of the
+<function>. Use "legendMarkerSize", "legendPosition" and
+"legendTextColor" config values to change legend's appearance and
+"showLegend" to switch it on and off. "legendMarkerSize" is size of a
+colored square in pixels, "legendPosition" controls in which corner of
+the canvas legend is shown ("lt" for left-top, "rt", "lb" or "rb" for
+others).
 
 CLIENT-SERVER COMMUNICATION
 
-The information transfered between web-client, nodejs server and tcp-client is presented in xml format, described in rsserver/data/rsscp.dtd 
-Web-client sends to tcp-client (through the server) an <updata> element, the tcp-client should send <downdata>. Both <updata> and <downdata> must have a "session" attribute. Every time a new web-client is connected to the server new session is created. Id for a new session (the value of a "session" attribute) is generated automatically unless the "session" variable is present in a query string of the URL. For example the URL http://127.0.0.1:1729/?session=s1 will open the session with ID "s1". The URL http://127.0.0.1:1729/ will open the session with a new ID.
-Every session can have one or more browser window, each window has a unic (inside one session) ID. 
-Every window has one <head> and any quantity of <canvas>, <text> and <button> elements. Each of those elements has a unic (inside the session) ID. A canvas object has one <rotation> and one <transform> elements, can have one <function> element and any quantity of <arc>, <line> and <point> elements. Each <arc>, <line> and <point> has a unic (inside the session) id. 
+The information transfered between web-client, nodejs server and
+tcp-client is presented in xml format, described in
+rsserver/data/rsscp.dtd Web-client sends to tcp-client (through the
+server) an <updata> element, the tcp-client should send
+<downdata>. Both <updata> and <downdata> must have a "session"
+attribute. Every time a new web-client is connected to the server new
+session is created. Id for a new session (the value of a "session"
+attribute) is generated automatically unless the "session" variable is
+present in a query string of the URL. For example the URL
+http://127.0.0.1:1729/?session=s1 will open the session with ID
+"s1". The URL http://127.0.0.1:1729/ will open the session with a new
+ID.
 
-<downdata> element must have an "action" attribute (the value is "request" by default). Set it to "create" to add new elements to window or canvas, "populate" to add elements to canvas, to set it's rotation or transformation, or change configuration, and change a text on a button, "remove" to remove object from window or canvas, "request" to receive information about the given object. 
-<updata> element has a "status" attribute. It can take an "info" value, when nothing is changed in web view, "updated" when something is changed in a given object, "created" or "removed" when object is created or removed, "button-click" when user clicks a button. 
+Every session can have one or more browser windows, each window has a
+unique (within one session) ID.  Every window has one <head> and any
+quantity of <canvas>, <text> and <button> elements. Each of those
+elements has a unique (within the session) ID. A canvas object has one
+<rotation> and one <transform> elements, can have one <function>
+element and any quantity of <arc>, <line> and <point> elements. Each
+<arc>, <line> and <point> has a unique (within the session) ID.
 
-<downdata> and <updata> must have an "object" attribute. (Except the "action" attribute of <downdata> value is "request". In this case the server sends an information about all windows of a given session. If "session" attribute is not present, the information about all open sessions is sent to tcp-server). The "object" attribute contains an ID of the given object (exsept if <downdata atcion="create"> and <updata status="created">, in this case "object" is the ID of the parent object). 
+<downdata> element must have an "action" attribute (the value is
+"request" by default). Set it to "create" to add new elements to
+window or canvas, "populate" to add elements to canvas, to set its
+rotation or transformation, or change configuration, and change a text
+on a button, "remove" to remove object from window or canvas,
+"request" to receive information about the given object.
 
-To set a layout for the objects on the page use <template> tag. It should be sent as a child of <downdata> whith action="create" attribute and contain valid html. Html tag that should contain functional elemenst (canvases, buttons or texts, created via the server) should have attributes class="wrapper" and content-id="[id of the contained object]". The content elements will be added to those tags and resulting html will be inserted to the page. A <template> tag may have "replace" attribute. If set to "true" the content of the <template> will replace existing content of the page, exsept page title, "show data" block and elements which do not have "wrappers" in the template (they will be placed after the template content, use <downdata action="remove"...> if you want to delete them), otherwise it will be added to the end of the existing content (befor "show data" block). 
+<updata> element has a "status" attribute. It can take an "info"
+value, when nothing is changed in web view, "updated" when something
+is changed in a given object, "created" or "removed" when object is
+created or removed, "button-click" when user clicks a button.
 
-If an html-templates are applied to a window, in reply to "request" action the objects of the window are not integrated in html, they are sent as a list, applied templates are sent among them (see example). 
+<downdata> and <updata> must have an "object" attribute. (Except the
+"action" attribute of <downdata> value is "request". In this case the
+server sends an information about all windows of a given session. If
+"session" attribute is not present, the information about all open
+sessions is sent to tcp-server). The "object" attribute contains an ID
+of the given object (exsept if <downdata atcion="create"> and <updata
+status="created">, in this case "object" is the ID of the parent
+object).
+
+To set a layout for the objects on the page use <template> tag. It
+should be sent as a child of <downdata> whith action="create"
+attribute and contain valid html. Html tag that should contain
+functional elemenst (canvases, buttons or texts, created via the
+server) should have attributes class="wrapper" and content-id="[id of
+the contained object]". The content elements will be added to those
+tags and resulting html will be inserted to the page. A <template> tag
+may have "replace" attribute. If set to "true" the content of the
+<template> will replace existing content of the page, exsept page
+title, "show data" block and elements which do not have "wrappers" in
+the template (they will be placed after the template content, use
+<downdata action="remove"...> if you want to delete them), otherwise
+it will be added to the end of the existing content (befor "show data"
+block).
+
+If an html-template is applied to a window, in reply to "request"
+action the objects of the window are not integrated in html, they are
+sent as a list, applied templates are sent among them (see example).
 
 FILLING SURFACE OF RIEMANN SPHERE OR COMPLEX PLANE
 
-To fill surface of Riemann sphere (or complex plane) use <downdata> with "populate" as "action" attribute value and canvas id as "object". 
-There to ways to fill a surface: send a rational function data to obtain it's Julia and Fatou sets or send a bitmap. 
+To fill surface of Riemann sphere (or complex plane) use <downdata>
+with "populate" as "action" attribute value and canvas id as "object".
+There two ways to fill a surface: send a rational function data to
+obtain it's Julia and Fatou sets or send a bitmap.
 
-To send a bitmap use a <bitmap> tag with <data> and <transform> as childnodes. <data> should contain dataURL for the image. For spherical geometry the image should represent colors corresponding to infinity at the top, to zero in the bottom, to negative imaginary numbers in the sides. For plane geometry the right top corner corresponds to 1+i, left bottom to -1-i. <transform> tag should be present if the image depicts complex plane of sphere with a Moebius transformation applied. If there are no <transform> tag the image is iterpreted as not transformed, if a Moebius transformation is applyed to the sphere or plane, the image would be stretched. 
+To send a bitmap use a <bitmap> tag with <data> and <transform> as
+childnodes. <data> should contain dataURL for the image. For spherical
+geometry the image should represent colors corresponding to infinity
+at the top, to zero in the bottom, to negative imaginary numbers in
+the sides. For plane geometry the right top corner corresponds to 1+i,
+left bottom to -1-i. <transform> tag should be present if the image
+depicts complex plane of sphere with a Moebius transformation
+applied. If there are no <transform> tag the image is interpreted as
+not transformed, if a Moebius transformation is applied to the sphere
+or plane, the image would be stretched.
 
-By default, correspondance between points on the sphere and on the bitmap image is standart UV-mapping. It is also possible to use stereographic projection. To do this add a mapping="steregraphic" attribute to <bitmap> tag and add six (istead of one in default case) <data> children. Each of the <data> tags should contain a "part" attribute, the value of this attribute could be "0", "1", "i", "-1", "-i" and "Infinity". Part 0 is interpreted as a complex plane with zero at the center, real axis pointing to the right and imaginary axis to the top. The 1 is on 3/4 of the width, i on 1/4 of the height. I.e. complex number, corresponding to a point (x, y) of bitmap with width w and height h is 4*(x-w/2)/w - i*4*(y-h/2)/h. For other parts the bitmap should contain a complex plain with Moebius transformation, bringing zero to a given point and infinity to the opposite point (for example, (z+1)/(-z+1) for 1, (z+i)/(iz+1) for i, 1/z for infinity). These bitmaps will be automatically selected accoriding to rotation of the sphere. If <transform> tag is present in <bitmap>, the <data> tags should contain transformed images, part 0 with image of zero in the senter, part 1 with image of 1 and so on. 
-The parts of one bitmap series could be sent to the all in one <bitmap> tag or separately. If they will have the same name and <transform>, they will be interpreted as parts of one image. 
+If the sphere was populated by rational function, its legend and
+equation lines are generated automatically. Bitmap filling by default
+gives no legend and equation line. Use <legend> and <equation> tags to
+set them manully.  <downdata> with "populate" as action, canvas id as
+object and <equation> as child will set the content of <equation> tag
+to a text line under the canvas. <legend> tag should contain
+<legendline> tags as children. Each legend line should contain "color"
+attribute (representing color of a small square) and text or <cn> as
+content. Text content or string representation of a complex number
+will be placed next to the colored square. If no "color" attribute is
+present and the content of the <legendline> is <cn>, the square will
+be colored to the color, used in shader to represent corresponding
+complex number.
 
-To provide a new image with a given name (forget all saved bitmaps for different transformations with this name) set a refresh="true" attribute for <bitmap> tag. 
-
-If the sphere was populated by rational function, it's legend and equation line are generated automatically. Bitmap filling by default gives no legend and equation line. Use <legend> and <equation> tags to set them manully. 
-<downdata> with "populate" as action, canvas id as object and <equation> as child will set the content of <equation> tag to a text line under the canvas. <legend> tag should contain <legendline> tags as children. Each legend line should contain "color" attribute (representing color of a small square) and text or <cn> as content. Text content or string representation of a complex number will be placed next to the colored square. If no "color" attribute is present and the content of the <legendline> is <cn>, the square will be colored to the color, used in shader to represent corresponding complex number. 
-
-<legend> and <bitmap> tags can contain a "name" attribute. By default populating a canvas with bitmap will remove a legend, but if the legend has the same name as the bitmap, it remains. 
-
-
+<legend> and <bitmap> tags can contain a "name" attribute. By default
+populating a canvas with bitmap will remove a legend, but if the
+legend has the same name as the bitmap, it remains.
