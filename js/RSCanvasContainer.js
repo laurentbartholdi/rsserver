@@ -72,35 +72,148 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		imgTag.setAttribute("src", imgData);
 		domElement.appendChild(imgTag);
 	}
+	
+	function generateBitmaps () {
+		var arrVectors = getIcosahedron();
+		
+		var arrData = [];
+		var t = MoebiusTransform.identity;
+		var bmp = createEmptyNode("bitmap");
+		bmp.setAttribute("name", "owls");
+		bmp.appendChild(t.toXML());
+		var dataNode = createEmptyNode("data");
+		dataNode.textContent = getTestImageData (t);
+		bmp.appendChild(dataNode);
+		arrData.push(bmp);
+		var scale = .1;
+		for (i=0; i < arrVectors.length; i++) {
+			var c = CU.localToComplex(arrVectors[i]);
+			t = MoebiusTransform.zoomTransform(c, scale);
+			bmp = createEmptyNode("bitmap");
+			bmp.setAttribute("name", "owls");
+			bmp.appendChild(t.toXML());
+			var dataNode = createEmptyNode("data");
+			dataNode.textContent = getTestImageData (t);
+			bmp.appendChild(dataNode);
+			arrData.push(bmp);
+		}
+		return arrData;
+	} 
+	
+	function imitateData(data, object) {
+		var dataNode = createEmptyNode("downdata");
+		dataNode.setAttribute("action", "populate");
+		dataNode.setAttribute("object", object || that.rsCanvas.serverId);
+		if (Array.isArray(data)) {
+			for (var i = 0; i < data.length; i++) {
+				dataNode.appendChild(data[i]);
+			}
+		} else {
+			dataNode.appendChild(data);
+		}
+		var str = xmlSerializer.serializeToString(dataNode);
+		onNewData(str);
+	}
+	var centerPointExists = false;
+	function addCenter() {
+		if (!centerPointExists) {
+			that.rsCanvas.canvas3d.addEventListener("transformChanged", that.showCenter);
+			addPoint(that.rsCanvas.getTransform().getCenter(), {id: that.rsCanvas.serverId + "transformCenter", movable: "false"});
+			centerPointExists = true;
+		}
+		
+	}
+	this.fillMultiple = function (event) {
+		clearTestBitmapCanvas();
+		imitateData(generateBitmaps());
+		addPoints();
+		addCenter();
+		that.rsCanvas.canvas3d.removeEventListener("transformChanged", that.fillBitmapContinue);
+	
+	}
+	
+	var pointsAdded = false;
+	var addPoints = function (event) {
+		if (!pointsAdded) {
+			var arrVectors = getIcosahedron();
+			var arrData = [];
+			for (var i = 0; i < arrVectors.length; i++ ) {
+				var point = createEmptyNode("point");
+				point.setAttribute("movable", "false");
+				point.setAttribute("color", "orange");
+				var sp = createEmptyNode("sp");
+				sp.setAttribute("x", arrVectors[i].x);
+				sp.setAttribute("y", arrVectors[i].y);
+				sp.setAttribute("z", arrVectors[i].z);
+				point.appendChild(sp);
+				var label = createEmptyNode("label");
+				label.textContent = i+1;
+				point.appendChild(label);
+				arrData.push(point);
+			}
+			imitateData(arrData);
+			pointsAdded = true;
+		}
+	}
+	
 	this.fillBitmap = function(event) {
 		console.log("fill bitmap");
-		var c = document.getElementById("testBitmapCanvas");
-		if (c) {
-			c.parentNode.removeChild(c);
-		}
+		clearTestBitmapCanvas();
 		var tr = that.rsCanvas.getTransform();
 		var dataURL = getTestImageData(tr);
-		var dataObject = new BitmapFillData(dataURL, tr, "test");
-		that.rsCanvas.updateSphereMaterial(dataObject);
-		that.rsCanvas.somethingChanged = true;
 		
+		var bmp = createEmptyNode("bitmap");
+		bmp.setAttribute("name", "owl");
+		bmp.appendChild(tr.toXML());
+		var dataNode = createEmptyNode("data");
+		dataNode.textContent = dataURL;
+		bmp.appendChild(dataNode);
+		imitateData(bmp);
+		addCenter();
 		that.rsCanvas.canvas3d.addEventListener("transformChanged", that.fillBitmapContinue);
+
+		
+	}
+	
+	
+	
+	function addPoint (c, attrs) {
+		var point = createEmptyNode("point");
+		var cn = createEmptyNode("cn");
+		cn.setAttribute("re", c.re);
+		cn.setAttribute("im", c.i);
+		point.appendChild(cn);
+		attrs = attrs || {};
+		if (attrs.hasOwnProperty("label")); {
+			var label = createEmptyNode("label");
+			label.textContent = attrs.label;
+			point.appendChild(label);
+		}
+		for (var f in attrs)
+			if (attrs.hasOwnProperty(f) && f != "label") point.setAttribute(f, attrs[f]);
+		imitateData(point);
+
+	} 
+	this.showCenter = function(event) {
+		var t = that.rsCanvas.getTransform();
+		var c = t.getCenter();
+		imitateData(c.toXMLObj(), that.rsCanvas.serverId + "transformCenter");
+		
+	}
+	function clearTestBitmapCanvas () {
+		var c;// = document.getElementById("testBitmapCanvas");
+		while (c = document.getElementById("testBitmapCanvas")) {
+			c.parentNode.removeChild(c);
+		}
 	}
 	
 	this.fillBitmapContinue = function (event) {
-			var c = document.getElementById("testBitmapCanvas");
-			if (c) {
-				c.parentNode.removeChild(c);
-			}
-		if (that.rsCanvas.sphere.material.name == "test") {
-			var tr = that.rsCanvas.getTransform();
-			var dataURL = getTestImageData(tr);
-			var dataObject = new BitmapFillData(dataURL, tr, "test");
-			that.rsCanvas.updateSphereMaterial(dataObject);
-			that.rsCanvas.somethingChanged = true;
-			
+		console.log("fillBitmapContinue");
+		if (that.rsCanvas.sphere.material.name == "owl") {
+			that.fillBitmap();
 		} else {
-			that.rsCanvas.canvas3d.removeEventListener("transformChanged", this.fillBitmapContinue);
+			clearTestBitmapCanvas();
+			that.rsCanvas.canvas3d.removeEventListener("transformChanged", that.fillBitmapContinue);
 			
 		}
 	}
@@ -240,7 +353,9 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	
 	var td5 = document.createElement("td");
 	//addButton(td5, "Copy image", this.copyImage);
+	td5.setAttribute("valign", "top");
 	addButton(td5, "Fill bitmap", this.fillBitmap);
+	addButton(td5, "Multiple bitmaps", this.fillMultiple);
 	
 	controlsRow.appendChild(td01);
 	if (DEBUG > 0) controlsRow.appendChild(td5);

@@ -5,6 +5,63 @@ const TEST_ABS_VALUES = [0.1, 0.2, 0.5, 0.6, 0.7, 0.8, 0.9,  1, 1.2, 1.4, 1.6, 1
 const TEST_ANGLE_SECTIONS = 12;
 const steps = 200;
 
+function getIcosahedron() {
+	var phi1 = 0.5*(Math.sqrt(5)+1);
+	var v0 = new THREE.Vector3(1, phi1, 0);
+	var vertices = [v0];
+	addRect(2, vertices);
+	addCyclePerm(vertices);
+	console.log(vertices)
+	return vertices;
+}
+
+function addCyclePerm (arr, arrres) {
+	return addSymmetry("perm", arr, arrres);
+}
+
+function addRect(axis, arr, arrres) {
+	res = addSymmetry({type: "mirror", axis: (axis + 1) % 3}, arr, arrres);
+	addSymmetry({type: "mirror", axis: (axis + 2) % 3}, arr, res);
+	return res;
+}
+
+function addSymmetry (type, arr, arrres) {
+	var l0 = arr.length;
+	var res = arrres || arr;
+	
+	if (typeof type === "string") {
+		switch(type) {
+		case "perm" :{
+			for (var i = arrres ? 0 : 1; i < 3; i++) {
+				for (var j = 0; j < l0; j++) {
+					var v = new THREE.Vector3();
+					for (var k = 0; k < 3; k++)
+						v.setComponent(k, arr[j].getComponent((k+i) % 3));
+					res.push(v);
+				}
+			}	
+			break;		
+		} 
+		}
+	} else if (typeof type === "object" && type.hasOwnProperty("type")){
+		switch(type.type) {
+			case "mirror" : {
+				if (type.hasOwnProperty("axis")) {
+					for (var jj = 0; jj < l0; jj++) {
+						var v = new THREE.Vector3();
+						v.copy(arr[jj]);
+						v.setComponent(type.axis, -arr[jj].getComponent(type.axis));
+						res.push(v);
+					}
+				} 
+				break;				
+			}
+		}
+	}
+	return res;
+	
+}
+
 function getTestImageData (transform_, w, h) {
 	w = w || TEST_CANVAS_WIDTH;
 	h = h || TEST_CANVAS_HEIGHT;
@@ -175,4 +232,4 @@ function getTestImageData (transform_, w, h) {
 	
 }
 
-
+getIcosahedron();

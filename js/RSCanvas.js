@@ -1165,6 +1165,10 @@ rp.setTransform = function(transform) {
 	this.currentTransform = transform.copy();
 		//console.log(this.currentTransform.toString(), this.currentTransform.getDistance(this.oldTransform), this.oldTransform.getDistance(this.currentTransform));
 	this.updateTransform();
+    if(that.configManager.getConfigValue("reportTransform")) {
+    	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: that.getTransformElement(), object: that.serverId}}));       		
+	}
+
 	this.transformUpdated = true;
 	this.somethingChanged = true;
 };

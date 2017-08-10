@@ -207,10 +207,28 @@ MoebiusTransform.prototype = {
 			
 		},
 		
+		getCenter: function () {
+			
+			/*var s0 = (this.d.r2() + this.b.r2())/this.determinantAbs();
+			var sInf = (this.c.r2()+this.a.r2())/this.determinantAbs();
+			var sPlus = s0 + sInf;
+			var rho = 0.5*(s0-sInf + Math.sqrt(sPlus*sPlus-4))/Math.sqrt(s0*sInf - 1);
+			var theta = this.d.t() - this.c.t();
+			return Complex.Polar(rho, theta);*/
+			var s0 = (this.a.r2() + this.b.r2())/this.determinantAbs();
+			var sInf = (this.c.r2()+this.d.r2())/this.determinantAbs();
+			if (s0*sInf == 1) return Complex["0"];
+			var sPlus = s0 + sInf;
+			var rho = 0.5*(s0-sInf + Math.sqrt(sPlus*sPlus-4))/Math.sqrt(s0*sInf - 1);
+			var t = this;
+			var theta = t.a.mult(Complex.conj(t.c)).add(t.b.mult(Complex.conj(t.d))).t();
+			return Complex.Polar(rho, theta);
+		},
+		
 		//relative distortion between this and argument
 		getDistance: function (t) {
 			if (t instanceof MoebiusTransform) {
-				return this.invert().superpos(t).getMetric();
+				return this.superpos(t.invert()).getMetric() - 1;
 			} else {
 				console.error("Invalid transform", t);
 				return 0;
@@ -300,9 +318,36 @@ MoebiusTransform.byInitEndVectors = function (z, w) {
 		M.subMatrix(2).determinant());                 
 }
 
+MoebiusTransform.zoomTransform = function (w0, scale) {
+	var zoom = new MoebiusTransform(new Complex(scale,0), w0,
+			new Complex(-scale*w0.re, scale*w0.i), Complex["1"]);
+	return new MoebiusTransform(Complex["1"], new Complex(0, -1),
+			new Complex(0, -1), Complex["1"]).superpos(zoom);
+}
+
 MoebiusTransform.fromXML = function (transformData) {
 	var type = transformData.getAttribute("type");
 	if (type == "identity") return MoebiusTransform.identity;
+	if (type == "zoom") {
+		var scale = parseFloat(transformData.getAttribute("scale"));
+		if (isNaN(scale)) {
+			scale = 1;
+			console.warn("Invalid transform scale", transformData.getAttribute("scale"));
+		}
+		var w0;
+		var w0Node = transformData.getElementsByTagName("cn")[0];
+		if (w0Node) {
+			w0 = Complex.fromXML(w0Node);
+			if (!(w0 instanceof Complex)) {
+				console.warn("Invalid transform argument", w0Node);
+				w0 = Complex["0"];
+				
+			}
+		} else {
+			w0 = Complex["0"];
+		}
+		return MoebiusTransform.zoomTransform(w0, scale);
+	}
 	var trarr = [];
 	for (var i = 0; i < transformData.childNodes.length; i ++)
 		trarr.push(Complex.fromXML(transformData.childNodes[i]));

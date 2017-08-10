@@ -212,7 +212,11 @@ var DATA_IN_XML = true;
 						container.rscc.rsCanvas.updateSphereMaterial(surfaceData, true);
 						getOutputDomElement(dataObject, container.outputLine, 3);
 					} else if (dataElement.getElementsByTagName("bitmap").length > 0) {
-						var dataObject = new BitmapFillData(dataElement.getElementsByTagName("bitmap")[0]);
+						var bitmaps = dataElement.getElementsByTagName("bitmap");
+						for (var i = 0; i < bitmaps.length; i++) {
+							container.rscc.rsCanvas.cashBitmap(bitmaps[i]);
+						}
+						var dataObject = new BitmapFillData(bitmaps[0]);
 						container.rscc.rsCanvas.updateSphereMaterial(dataObject);
 						container.outputLine.innerHTML = "";
 					}
@@ -505,7 +509,7 @@ var DATA_IN_XML = true;
 		}
 		
 		function onNewData(data) {
-			console.log("on new data "+data);
+			//console.log("on new data "+data);
 			var xmlel = parseXml(data);
 			console.log(xmlel);
 			var arr;

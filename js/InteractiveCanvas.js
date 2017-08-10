@@ -5,12 +5,15 @@ InteractiveCanvas = function (canvas, materialData, canvasData) {
 	this.configManager = this.canvasData.configManager || new ConfigManager(this.canvasData);
 	this.bkgColor = this.configManager.getConfigValue("bkgColor") || new THREE.Color(0x333333);
 	
+	
+	this.bitmapCash = {};
+	
 }
 InteractiveCanvas.CAMERA_FOV = 45;
 InteractiveCanvas.prototype = {
 		constructor: InteractiveCanvas,
 		
-		updateSphereMaterial: function (materialData, rebuildShader) {
+		updateSphereMaterial: function (materialData, forceUpdate) {
 			if (materialData instanceof ComplexShaderMap) {
 				if (materialData.initData && materialData.initData.xml ) {
 					this.funcXML = materialData.initData.xml;
@@ -39,7 +42,7 @@ InteractiveCanvas.prototype = {
 				}
 				if (!(this.object.material instanceof THREE.ShaderMaterial) )
 					this.object.material = this.initShaderMaterial(this.object.geometry, materialData);
-				if (rebuildShader) {
+				if (forceUpdate) {
 					this.object.material.fragmentShader = this.getFragmentShaderString(materialData);
 					this.object.material.needsUpdate = true;
 					this.object.material.complexShaderMap = materialData;
@@ -59,8 +62,16 @@ InteractiveCanvas.prototype = {
 				if (!(this.object.material instanceof THREE.MeshLambertMaterial) ) 
 				{this.object.material = new THREE.MeshLambertMaterial()};
 				
-				this.initTextureMaterial(this.object.geometry, materialData, this.object.material);
+				if (!forceUpdate && materialData.hasOwnProperty("name")) {
+					if (materialData.baseTransform instanceof MoebiusTransform && materialData.baseTransform.getDistance(this.currentTransform) > 1e-13) {
+						var newData = this.chooseBitmap(materialData.name, this.currentTransform);
+						if (newData) materialData = newData;
+					}
+				} else if (materialData.hasOwnProperty("name")) {
+					this.cashBitmap(materialData);
+				}
 				
+				this.initTextureMaterial(this.object.geometry, materialData, this.object.material);
 				this.object.material.needsUpdate = true;
 				this.somethingChanged = true;
 				if (this.legend.update && !( this.legend.name && 
@@ -69,6 +80,36 @@ InteractiveCanvas.prototype = {
 					this.legend.update();
 			} 
 			
+		},
+		cashBitmap: function (bitmapNode) {
+			var materialData = bitmapNode instanceof BitmapFillData? bitmapNode : new BitmapFillData(bitmapNode);
+			if (materialData.hasOwnProperty("name")) {
+				if (!this.bitmapCash.hasOwnProperty(materialData.name)) this.bitmapCash[materialData.name] = [];
+				var exists = false;
+				for (var i = 0; i < this.bitmapCash[materialData.name].length; i++) {
+					if (this.bitmapCash[materialData.name][i].baseTransform.getDistance(materialData.baseTransform) < 1e-13)
+						exists = true;
+				}
+				if (!exists)
+					this.bitmapCash[materialData.name].push(materialData);
+			}			
+		},
+		
+		chooseBitmap: function (name, transform) {
+			if (!this.bitmapCash.hasOwnProperty(name)) {
+				return null
+			}
+			var minDistance = Number.POSITIVE_INFINITY;
+			var ind = -1;
+			for (var i = 0; i < this.bitmapCash[name].length; i++) {
+				var dist = this.bitmapCash[name][i].baseTransform.getDistance(transform);
+				if (dist < minDistance) {
+					minDistance = dist;
+					ind = i;
+				}
+			}
+			if (ind >= 0) return this.bitmapCash[name][ind];
+			return null;
 		},
 		 getFragmentShaderString: function (complexShaderMap) {
 	          	if (!complexShaderMap) {
@@ -377,6 +418,19 @@ InteractiveCanvas.prototype = {
 	        			//!?    
 	        			this.scene.add( this.object );
 	        			//---------------------------
+	        			
+	        			var that = this;
+	        			this.onTransformChanged = function (event) {
+	        				if (that.object && that.object.material && that.object.material.name ) {
+	        					var newData = that.chooseBitmap(that.object.material.name, that.getTransform());
+	        					if (newData) that.updateSphereMaterial(newData, false);
+	        				}
+	        			}
+	        			
+	        			if (this.canvas3d) {
+	        				this.canvas3d.addEventListener("transformChanged", this.onTransformChanged);
+	        			}
+
 	        		    
 	        		    this.inited = true;	        		
 	        	},
@@ -499,8 +553,8 @@ BitmapFillData = function (data, transform, name) {
 		} else {
 			this.baseTransform = MoebiusTransform.identity;
 		}
-		var name = dataNode.getAttribute("name");
-		if (name) this.name = name;
+		var name_ = data.getAttribute("name");
+		if (name_) this.name = name_;
 		
 	} else {
 		this.dataURL = data;
