@@ -30,8 +30,12 @@
 
 <!ELEMENT bitmap (#CDATA | (data, transform?))>
 <!ATTLIST bitmap
-	name CDATA #IMPLIED>
+	name CDATA #IMPLIED
+	refresh (true|false) false
+	mapping ("uv"|"stereographic") "uv">
 <DATA #CDATA> <!--dataURL for bitmap fill-->
+<!ATTLIST data
+	part ("0"|"1"|"I"|"-1"|"-I"|"Infininty") "0")>
 
 <!ELEMENT point (cn|sp, label?)>
 <!ATTLIST point
