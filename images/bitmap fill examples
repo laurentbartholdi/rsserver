@@ -1,0 +1,34 @@
+Here there are some examples of using bitmap textures for a Riemann sphere surface. All images (exsept dresden.jpg) contain two sets of lines: gray circles for numbers with constant absolute values (the bigger the value, the darker the line) and colored arcs of a constant argument (red for 0, green for 2/3*Pi, blue for 4/3*Pi). Different parts of "stereographic" images have slightly different background to show how they are substituting during rotation. 
+All the strings are targeted for a canvas with id "canvas0" in session "s1".
+
+Globus of the Dresden:
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap><data>images/dresden.jpg</data></bitmap></downdata>
+
+Bitmap with a specific name (will be cashed)
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"owl\"><data>images/owlUV.png</data></bitmap></downdata>
+
+Bitmap with a transformation specified. Fits best if transformation of the coinside with the given transformation (up to rotation). 
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"owl\"><transform><cn re=\"0.08015787435910315\" im=\"1.2343558080354053\"/><cn re=\"-0.9431199115365583\" im=\"-0.435698964370169\" r=\"1.0388978559463693\"/><cn re=\"0.8520091343008934\" im=\"-0.5944654659084936\" r=\"1.0388978559463677\"/><cn re=\"0.12045751414105998\" im=\"1.6900127205983797\"/></transform><data>images/owlUV(1).png</data></bitmap></downdata>
+
+
+
+Adding one bitmap with stereographic projection mapping (covers not entire sphere surface):
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\"><data>images/owl0.png</data></bitmap></downdata>
+
+Adding parts of a the same image one by one:
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" part=\"1\"><data>images/owl1.png</data></bitmap></downdata>
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" part=\"i\"><data>images/owlI.png</data></bitmap></downdata>
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" part=\"-1\"><data>images/owl-1.png</data></bitmap></downdata>
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" part=\"-i\"><data>images/owl-I.png</data></bitmap></downdata>
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" part=\"Infinity\"><data>images/owlInfinity.png</data></bitmap></downdata>
+
+Sending images for a specific transformation in one message:
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\"><transform><cn re=\"0.52\" im=\"-0.5\"/><cn re=\"0.5\" im=\"0.48\"/><cn re=\"-0.01\" im=\"-0.99\"/><cn re=\"1.01\" im=\"0.01\"/></transform><data part=\"0\">images/owl0_2.png</data><data part=\"1\">images/owl1_2.png</data><data part=\"i\">images/owlI_2.png</data><data part=\"-1\">images/owl-1_2.png</data><data part=\"-i\">images/owl-I_2.png</data><data part=\"inf\">images/owlInfinity_2.png</data></bitmap></downdata>
+
+
+Transforming the sphere and adding images corresponding to the given transformation in one message:
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><transform><cn re=\"0.02\" im=\"1\"/><cn re=\"-1\" im=\"-0.02\"/><cn re=\"0.02\" im=\"-1\"/><cn re=\"1\" im=\"-0.02\"/></transform><bitmap name=\"stereowls\" mapping=\"stereographic\"><transform><cn re=\"0.02\" im=\"1\"/><cn re=\"-1\" im=\"-0.02\"/><cn re=\"0.02\" im=\"-1\"/><cn re=\"1\" im=\"-0.02\"/></transform><data part=\"0\">images/owl0_1.png</data><data part=\"1\">images/owl1_1.png</data><data part=\"i\">images/owlI_1.png</data><data part=\"-1\">images/owl-1_1.png</data><data part=\"-i\">images/owl-I_1.png</data><data part=\"inf\">images/owlInfinity_1.png</data></bitmap></downdata>
+
+Replacing all cashed bitmaps with name "stereowls" by a new one:
+<downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"stereowls\" mapping=\"stereographic\" refresh=\"true\"><data>images/owl0.png</data></bitmap></downdata>
+
