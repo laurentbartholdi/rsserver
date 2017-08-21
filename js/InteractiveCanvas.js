@@ -84,8 +84,14 @@ InteractiveCanvas.prototype = {
 		cashBitmap: function (bitmapNode) {
 			var materialData = bitmapNode instanceof BitmapFillData? bitmapNode : new BitmapFillData(bitmapNode);
 			if (materialData.hasOwnProperty("name")) {
-				if (!this.bitmapCash.hasOwnProperty(materialData.name)) this.bitmapCash[materialData.name] = [];
+				if (!this.bitmapCash.hasOwnProperty(materialData.name)
+						|| materialData.refresh) this.bitmapCash[materialData.name] = [];
 				var exists = false;
+				if (this.bitmapCash[materialData.name].length > 0 && this.bitmapCash[materialData.name][0].mapping != materialData.mapping) {
+					console.warn("Mapping of existing data " + materialData.name + " (" + this.bitmapCash[materialData.name][0].mapping 
+							+ ") doesn't fit to new data mapping (" + materialData.mapping + ")");
+					return;
+				}
 				for (var i = 0; i < this.bitmapCash[materialData.name].length; i++) {
 					if (this.bitmapCash[materialData.name][i].baseTransform.getDistance(materialData.baseTransform) < 1e-13)
 						exists = true;
@@ -268,18 +274,19 @@ InteractiveCanvas.prototype = {
 	        		var loader = new THREE.TextureLoader();
 	        		var that_ = this;
 		      		material.baseTransform = baseTransform;
+		      		material.mappingType = data.mapping;
 	        		if (data.name) material.name = data.name;
 	        		else material.name = undefined;
-	        		loader.load(data.dataURL, function(texture) {
-		      		  texture.wrapS = that_.textureWrapS; //THREE.RepeatWrapping;
-		      		  texture.wrapT = that_.textureWrapT; //THREE.RepeatWrapping;
-		      		  material.map = texture;
-		      		  material.needsUpdate = true;
-		      		  material.map.needsUpdate = true;
-		      		  that_.somethingChanged = true;
-	        			
-	        		});
-	      			 this.updateCustomUVs (geometry, this.getUV, {transform: surfaceTransform});
+		        		loader.load(data.dataURL, function(texture) {
+			      		  texture.wrapS = that_.textureWrapS; 
+			      		  texture.wrapT = that_.textureWrapT; 
+			      		  material.map = texture;
+			      		  material.needsUpdate = true;
+			      		  material.map.needsUpdate = true;
+			      		  that_.somethingChanged = true;
+		        			
+		        		});
+	      			 this.updateCustomUVs (geometry, this.getUV, {transform: surfaceTransform /*TODO*/, mapping: data.mapping});
 	      			 this.somethingChanged = true;
 	      			 return material;
 	        	},
@@ -293,6 +300,10 @@ InteractiveCanvas.prototype = {
 	        	 		var indicies = geometry.getIndex();
 	        	 		
 	        	 		var params = this.getUVOptions(paramsArg.transform);
+	        	 		for (var f in paramsArg) {
+	        	 			if (paramsArg.hasOwnProperty(f) && f != "transform")
+	        	 				params[f] = paramsArg[f];
+	        	 		}
 	        	 		if (!indicies) {
 	        	     		for (var i = 0; i < posAttr.count; i+=3) {
 	        	     			var uvs = [];
@@ -543,9 +554,34 @@ icp.getUVOptions = function (tr) {
 
 BitmapFillData = function (data, transform, name) {
 	if (data instanceof Node) {
-		var dataNode = data.getElementsByTagName("data")[0] || data;
-		for (var i = 0; i < dataNode.childNodes.length; i++) {
-			if (dataNode.childNodes[i].nodeType == 3) this.dataURL = dataNode.childNodes[i].nodeValue;
+		var mapping = data.getAttribute("mapping") || "uv";
+		if (data.getAttribute("refresh") && 
+				data.getAttribute("refresh").substr(0, 1).toLowerCase() != "n" && 
+				data.getAttribute("refresh").substr(0, 1).toLowerCase() != "f") {
+			this.refresh = true;
+		} else { this.refresh = false}
+				
+		if (mapping.substr(0, 6) == "stereo") {
+			this.mapping = "stereo";
+			var dataNodes = data.getElementsByTagName("data");
+			this.data = [];
+			for (var j = 0; j < dataNodes.length; j++) {
+				var part = dataNodes[j].getAttribute("part") || "0";
+				part = part.toUpperCase();
+				if (part.substr(0, 3) == "INF") part = "Infinity";
+				var dataObj = {};
+				dataObj.focus = Complex[part];
+				dataObj.partName = part;
+			
+				dataObj.dataURL = dataNodes[j].textContent;
+				this.data.push(dataObj);
+			}
+		} else if (mapping.substr(0, 2) == "uv") {
+			this.mapping = "uv";
+			var dataNode = data.getElementsByTagName("data")[0] || data;
+			for (var i = 0; i < dataNode.childNodes.length; i++) {
+				if (dataNode.childNodes[i].nodeType == 3) this.dataURL = dataNode.childNodes[i].nodeValue;
+			}
 		}
 		var trXML =  data.getElementsByTagName("transform")[0]; 
 		if (trXML) {
@@ -570,14 +606,47 @@ BitmapFillData.prototype = {
 		constructor: BitmapFillData,
 		toXML: function () {
 			var res = createEmptyNode("bitmap");
-			var dataNode = createEmptyNode("data");
-			if (this.name) dataNode.addAttribute("name", this.name);
-			dataNode.textContent = this.dataURL;
-			res.appendChild(dataNode);
+			if (this.name) res.addAttribute("name", this.name);
+			if (this.mapping.substr(0, 6) == "stereo") {
+				res.addAttribute("mapping", "stereographic");
+				
+				for (var i = 0; i < this.data.length; i++) {
+					var curDataNode = createEmptyNode("data");
+					curDataNode.addAttribute("part", this.data[i].partName);
+					curDataNode.textContent = data[i].dataURL;
+					res.appendChild(curDataNode);
+					
+				}
+			} else {
+				res.addAttribute("mapping", "uv");
+				var dataNode = createEmptyNode("data");
+				dataNode.textContent = this.dataURL;
+				res.appendChild(dataNode);
+			}
 			res.appendChild(this.baseTransform.toXML());
 			return res;
+		}, 
+		
+		merge: function (newData) {
+			if (!(newData instanceof BitmapFillData) || newData.mapping != "stereo" || this.mapping != "stereo") {
+				return false
+			} else {
+				if (this.baseTransform.equals(newData.baseTransform)) {
+					for (var i = 0 ; i < newData.data.length; i ++) {
+						var ind = -1;
+						for (var j = 0; j < this.data.length; j++) {
+							if (this.data[j].focus.equals(newData.data[i].focus)) {
+								this.data[j] = newData.data[i];
+								ind = j;
+							}
+						}
+						if (ind < 0) this.data.push(newData.data[i]);
+					}
+					return true;
+				} else return false;
+			}
 		}
 }
-
+BitmapFillData.partNames = ["0", "1", "I", "-1", "-I", "Infinity"];
 
 

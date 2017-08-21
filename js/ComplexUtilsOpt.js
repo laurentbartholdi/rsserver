@@ -21,12 +21,12 @@ var CU = {
 		sphercicalToComplex: function (sph, transform) {
 			
 			var c;
-			if (sph.theta == Math.PI*.5) c = Complex["Infinity"];
+			if (sph.theta == Math.PI*.5) c = transform instanceof MoebiusTransform ? transform.infinityImage() : Complex["Infinity"];
 			else
 				c = Complex.Polar(
 					2*PROJECTION_SPHERE_RADIUS*Math.tan(0.5*(sph.theta + Math.PI*.5)), 
 					sph.phi);
-			if (transform) c = transform.apply(c);
+			if (transform instanceof MoebiusTransform) c = transform.apply(c);
 			return c;
 		},
 		//TODO perhaps not in use any more
@@ -53,7 +53,7 @@ var CU = {
 			}
 			else if (z1.equals(Complex["Infinity"])){
 				return 1/(1 + z2.r2());
-			} else if (z2.equals(Cmolex["Infinity"])) {
+			} else if (z2.equals(Complex["Infinity"])) {
 				return 1/(1+z1.r2());
 			} else 
 				return z1.sub(z2).r2()/((1+z1.r2())*(1+z2.r2()));
@@ -140,10 +140,15 @@ ComplexMatrix.prototype = {
 };
 
 MoebiusTransform = function (a, b, c, d){
-	this.a = a;
-	this.b = b;
-	this.c = c;
-	this.d = d;
+	if ((a instanceof Complex) && (b instanceof Complex) && (c instanceof Complex) && (d instanceof Complex)  ) {
+		this.a = a;
+		this.b = b;
+		this.c = c;
+		this.d = d;
+	} else {
+		console.error("Invalid Moebius Transformation arguments", a, b , c, d);
+	}
+	
 };
 
 
@@ -174,6 +179,7 @@ MoebiusTransform.prototype = {
 		},
 		/**
 		 * Returns superposition of initial and given transformations. Doesn't change initial transformation.
+		 * this.superpos(t).apply(z) = t.apply(this.apply(z));
 		 */
 		superpos: function(t) {
 			return new MoebiusTransform (
@@ -202,19 +208,13 @@ MoebiusTransform.prototype = {
 		
 		//returns maximal distortion of sphere surface
 		getMetric: function () {
-			var A = 2*this.determinantAbs()/(this.a.r2() + this.b.r2() + this.c.r2() + this.d.r2());
-			return (1+Math.sqrt(1-A*A))/A;
+			var A = Math.max(1, .5*(this.a.r2() + this.b.r2() + this.c.r2() + this.d.r2())/this.determinantAbs());
+
+			return A+Math.sqrt(A*A-1);
 			
 		},
 		
 		getCenter: function () {
-			
-			/*var s0 = (this.d.r2() + this.b.r2())/this.determinantAbs();
-			var sInf = (this.c.r2()+this.a.r2())/this.determinantAbs();
-			var sPlus = s0 + sInf;
-			var rho = 0.5*(s0-sInf + Math.sqrt(sPlus*sPlus-4))/Math.sqrt(s0*sInf - 1);
-			var theta = this.d.t() - this.c.t();
-			return Complex.Polar(rho, theta);*/
 			var s0 = (this.a.r2() + this.b.r2())/this.determinantAbs();
 			var sInf = (this.c.r2()+this.d.r2())/this.determinantAbs();
 			if (s0*sInf == 1) return Complex["0"];
@@ -247,6 +247,9 @@ MoebiusTransform.prototype = {
 		
 		copy: function() {
 			return new MoebiusTransform(this.a, this.b, this.c, this.d);
+		},
+		equals: function (t) {
+			return (this.superpos(t.invert()).isIdentity());
 		},
 		
 		isIdentity: function () {
@@ -323,6 +326,13 @@ MoebiusTransform.zoomTransform = function (w0, scale) {
 			new Complex(-scale*w0.re, scale*w0.i), Complex["1"]);
 	return new MoebiusTransform(Complex["1"], new Complex(0, -1),
 			new Complex(0, -1), Complex["1"]).superpos(zoom);
+}
+
+MoebiusTransform.focusTransform = function (center) {
+	if (center.isInfinity()) return new MoebiusTransform(Complex["0"], Complex["1"],
+														Complex["1"], Complex["0"]);		
+	return new MoebiusTransform(Complex["1"], center,
+			new Complex(-center.re, center.i), Complex["1"]);
 }
 
 MoebiusTransform.fromXML = function (transformData) {

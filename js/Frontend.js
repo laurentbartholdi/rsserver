@@ -14,7 +14,7 @@ var DATA_IN_XML = true;
 			//Executes when the html-page is loaded
 			console.log("page init launched");
 			pageDataXML = document.createElement("window");
-
+			//console.log(Complex.parseFunction("3+4i"));
 			mCCDOMElement = document.getElementById('elements-container');
 			//pageTitle = mCCDOMElement.appendChild(document.createElement("h1"));
 			pageTitle = document.createElement("h1");
@@ -509,7 +509,7 @@ var DATA_IN_XML = true;
 		}
 		
 		function onNewData(data) {
-			//console.log("on new data "+data);
+			if (DEBUG >1) console.log("on new data "+data);
 			var xmlel = parseXml(data);
 			console.log(xmlel);
 			var arr;

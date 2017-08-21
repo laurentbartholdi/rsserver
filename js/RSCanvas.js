@@ -249,7 +249,11 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 				if (this.sphere.material.baseTransform instanceof MoebiusTransform)
 					tr = this.currentTransform.superpos(this.sphere.material.baseTransform.invert());
 				else tr = this.currentTransform.copy();
-				this.updateCustomUVs (this.sphere.geometry, this.getUV, {transform: tr});
+				if (this.sphere.material.mappingType == "stereo") {
+					this.chooseStereoTexture(true);
+				} else {
+					this.updateCustomUVs (this.sphere.geometry, this.getUV, {transform: tr, mapping: this.sphere.material.mappingType});
+				}
 			}
 			updateAnchors();
 			transformDrawings();
@@ -586,7 +590,6 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		for (var i = 0; i < this.arcs.length; i++) {
 			this.arcs[i].visible = false;
 		}
-		console.log("reset arcs", this.arcs);
 		this.somethingChanged = true;
 	};
 	var arcVerticesBufferSize = 2*Math.ceil(Math.PI/Math.sqrt(lineOverTheSphere*lineOverTheSphere-1));
@@ -859,6 +862,8 @@ var RSCanvas = function(canvas, materialData, canvasData) {
 		rotQuaternion.setFromAxisAngle(rotAxis, rotAngle);
 		that.sphere.quaternion.multiplyQuaternions(rotQuaternion, startRotQuaternion);
 		rotationChanged = true;//resets in handleMouseUp;
+		//console.log(this);
+		that.chooseStereoTexture();
 		
 	}
 	//--------------end rotation----------------------------------------
@@ -1144,6 +1149,8 @@ rp.getObjectGeometry = function () {
 
 RSCanvas.WIDTH_SEGMENTS = 128;
 RSCanvas.HEIGHT_SEGMENTS = 128;
+RSCanvas.TEXTURE_COVER_SIZE = 2;
+
 rp.deltaU = .5/RSCanvas.WIDTH_SEGMENTS;
 rp.deltaV = .5/RSCanvas.HEIGHT_SEGMENTS;
 
@@ -1152,9 +1159,16 @@ rp.getUV = function (x, y, z, params) {
 	params = params || {};
 	var surfaceTransform = params.transform || MoebiusTransform.identity;
 	var c = CU.localToComplex (pos, surfaceTransform);
-	//console.log("inside", params);
-	var sph = CU.projectToSphere(c);
-	var uv = CU.sphericalToUV(sph);
+	var uv = {};
+	if (params.mapping == "stereo") {
+		uv.u = Math.max(Math.min(1, 0.5*(1+ c.re/RSCanvas.TEXTURE_COVER_SIZE)), 0);
+		uv.v = Math.max(Math.min(1, 0.5*(1+ c.i/RSCanvas.TEXTURE_COVER_SIZE)), 0);
+		//console.log(x, y, z, c.re, c.i, uv.u, uv.v);
+	} else {
+		//console.log("inside", params);
+		var sph = CU.projectToSphere(c);
+		var uv = CU.sphericalToUV(sph);
+	}
 	return uv;
 };
 
@@ -1165,8 +1179,8 @@ rp.setTransform = function(transform) {
 	this.currentTransform = transform.copy();
 		//console.log(this.currentTransform.toString(), this.currentTransform.getDistance(this.oldTransform), this.oldTransform.getDistance(this.currentTransform));
 	this.updateTransform();
-    if(that.configManager.getConfigValue("reportTransform")) {
-    	that.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: that.getTransformElement(), object: that.serverId}}));       		
+    if(this.configManager.getConfigValue("reportTransform")) {
+    	this.canvas3d.dispatchEvent(new CustomEvent("transformChanged", {detail: {data: this.getTransformElement(), object: this.serverId}}));       		
 	}
 
 	this.transformUpdated = true;
@@ -1538,7 +1552,6 @@ rp.parseData = function(data) {
 		arcsParsed = true;
 	}
 	var legendEl =  data.getElementsByTagName("legend")[0];
-	console.log("legend", legendEl);
 	if (legendEl) {
 		var legendLines = legendEl.getElementsByTagName("legendline");
 		var legendData = [];
@@ -1561,7 +1574,6 @@ rp.parseData = function(data) {
 		if (legendEl.hasAttribute("name"))
 			this.legend.name = legendEl.getAttribute("name");
 		else this.legend.name = undefined;
-		console.log("legend data", data);
 		this.legend.update(legendData);
 		if (legendData.length > 0 && this.configManager.getConfigValue("showLegend")) {
 			this.legend.visible = true;
@@ -1599,6 +1611,122 @@ rp.getAttributeValues = function(posArr, i, res) {
 	return res;
 	
 };
+rp.cashBitmap = function(bitmapNode) {
+	var materialData = bitmapNode instanceof BitmapFillData? bitmapNode : new BitmapFillData(bitmapNode);
+	if (materialData.mapping == "stereo" && 
+			materialData.name && 
+			this.bitmapCash.hasOwnProperty(materialData.name) &&
+			!materialData.refresh) {
+		if (this.bitmapCash[materialData.name].length > 0 && this.bitmapCash[materialData.name][0].mapping != materialData.mapping) {
+			console.warn("Mapping of existing data " + materialData.name + " (" + this.bitmapCash[materialData.name][0].mapping 
+					+ ") doesn't fit to new data mapping (" + materialData.mapping + ")");
+			return;
+		}
+
+		var merged = false;
+		for (var i = 0; i < this.bitmapCash[materialData.name].length; i++) {
+			if (this.bitmapCash[materialData.name][i].merge(materialData)) merged = true;
+		}
+		if (!merged) this.bitmapCash[materialData.name].push(materialData);
+	} else {
+		InteractiveCanvas.prototype.cashBitmap.call(this, materialData);
+	}
+}
+
+rp.initTextureMaterial = function (geometry, data, material) {
+	if (data instanceof BitmapFillData && data.mapping == "stereo") {
+		material = material || new THREE.MeshLambertMaterial();
+		material.name = data.name;
+		material.mappingType = "stereo";
+		var loader = new THREE.TextureLoader();
+		var that_ = this;
+		material.baseTransform = data.baseTransform || MoebiusTransform.identity;
+		var texturesLoaded = 0;
+		if (data.refresh ||
+				!this.texturesPool ||
+				this.texturesPool.name != data.name ||
+				!this.texturesPool.baseTransform.equals(data.baseTransform)) {
+			//refresh textures pool
+			this.texturesPool = new Array(BitmapFillData.partNames.length);
+			this.texturesPool.baseTransform = data.baseTransform || MoebiusTransform.identity;
+			this.texturesPool.name = data.name;
+			for (var i = 0; i < this.texturesPool.length; i ++) {
+				this.texturesPool[i] = {focus: Complex[BitmapFillData.partNames[i]]}
+			}
+		}
+		data.data.forEach(function(value, index){
+			var indexInPool = -1;
+			for (var i = 0; i < this.texturesPool.length; i++) {
+				if (this.texturesPool[i] && this.texturesPool[i].focus instanceof Complex) {
+					if (this.texturesPool[i].focus.equals(value.focus)) {
+						indexInPool = i;
+					} 
+				}
+			}
+			if (indexInPool >= 0) {
+				loader.load(value.dataURL, function(texture){
+					that_.texturesPool[indexInPool].texture = texture;
+					texturesLoaded ++;
+					if (texturesLoaded == data.data.length) {
+						material.mappingType = "stereo";
+						that_.chooseStereoTexture.call(that_, true);
+					}
+				});
+			} else {
+				texturesLoaded ++; 
+			}
+		}, this);
+		if (texturesLoaded == data.data.length) this.chooseStereoTexture(true);
+			
+		
+
+	} else {
+		InteractiveCanvas.prototype.initTextureMaterial.call(this, geometry, data, material);
+	}
+}
+
+rp.chooseStereoTexture = function (force) {
+	if (this.sphere.material.mappingType != "stereo") return;
+	if (!this.texturesPool || this.texturesPool.length < 1) return;
+	var front = this.getFrontPointBase();
+	var minDist = 2;
+	var ind = -1;
+	for (i = 0; i < this.texturesPool.length; i ++) {
+		if (this.texturesPool[i].texture) {
+			var f = this.texturesPool[i].focus;
+			var focus = this.currentTransform.invert().apply(this.sphere.material.baseTransform.apply(f));
+			var d = CU.getDistance(front, focus);
+			d = CU.getDistance(front, focus);
+			if (d < minDist) {
+				minDist = d;
+				ind = i;
+			}
+		}
+	}
+	if (ind >= 0 && (ind != this.sphere.material.indexInPool || force)) {
+		this.sphere.material.map = this.texturesPool[ind].texture;
+		var surfaceTransform = this.getTransform().superpos(this.sphere.material.baseTransform.invert().superpos(MoebiusTransform.focusTransform( this.texturesPool[ind].focus).invert()));
+		this.updateCustomUVs (this.sphere.geometry, this.getUV, {transform: surfaceTransform , mapping: "stereo"});
+			 
+		this.sphere.material.needsUpdate = true;
+		this.sphere.material.indexInPool = ind;
+		
+		this.somethingChanged = true;
+	}
+}
+
+rp.getFrontPoint = function () {
+	var p = this.converter.canvasPosToLocal ({x:this.canvas3d.width/2, y: this.canvas3d.height/2});
+	
+	var c = CU.localToComplex(p, this.getTransform());
+	return c;
+}
+rp.getFrontPointBase = function () {
+	var p = this.converter.canvasPosToLocal ({x:this.canvas3d.width/2, y: this.canvas3d.height/2});
+	
+	var c = CU.localToComplex(p);
+	return c;
+}
 
 
 
@@ -1652,7 +1780,7 @@ RSCanvas.PointConverter.prototype = {
         
         canvasPosToWorld: function (pos) {
             var intersects = this.getIntersects(pos);
-            if (intersects.length) {
+             if (intersects.length) {
             	var i = 0;
             	while (i < intersects.length) {
              		if (intersects[i].object == this.canvasObj.sphere) {

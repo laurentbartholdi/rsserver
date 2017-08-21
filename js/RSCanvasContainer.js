@@ -72,7 +72,23 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		imgTag.setAttribute("src", imgData);
 		domElement.appendChild(imgTag);
 	}
-	
+
+	//--------Debug functions ----------------------------------------	
+	function imitateData(data, object) {
+		var dataNode = createEmptyNode("downdata");
+		dataNode.setAttribute("action", "populate");
+		dataNode.setAttribute("object", object || that.rsCanvas.serverId);
+		if (Array.isArray(data)) {
+			for (var i = 0; i < data.length; i++) {
+				dataNode.appendChild(data[i]);
+			}
+		} else {
+			dataNode.appendChild(data);
+		}
+		var str = xmlSerializer.serializeToString(dataNode);
+		onNewData(str);
+	}
+
 	function generateBitmaps () {
 		var arrVectors = getIcosahedron();
 		
@@ -100,20 +116,6 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		return arrData;
 	} 
 	
-	function imitateData(data, object) {
-		var dataNode = createEmptyNode("downdata");
-		dataNode.setAttribute("action", "populate");
-		dataNode.setAttribute("object", object || that.rsCanvas.serverId);
-		if (Array.isArray(data)) {
-			for (var i = 0; i < data.length; i++) {
-				dataNode.appendChild(data[i]);
-			}
-		} else {
-			dataNode.appendChild(data);
-		}
-		var str = xmlSerializer.serializeToString(dataNode);
-		onNewData(str);
-	}
 	var centerPointExists = false;
 	function addCenter() {
 		if (!centerPointExists) {
@@ -132,6 +134,39 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	
 	}
 	
+	var frontPointAdded = false;
+		var parts = ["0", "1", "I", "-1", "-I", "Infinity"];
+	
+	this.stereoBitmaps = function (event) {
+		clearTestBitmapCanvas();
+		for (var i = 0; i < parts.length; i ++ ){
+			var bmp = createEmptyNode("bitmap");
+			bmp.setAttribute("mapping", "stereographic");
+			bmp.setAttribute("name", "stereowls");
+			var tr = that.rsCanvas.getTransform();
+			bmp.appendChild(tr.toXML());
+			var dataURL = getTestStereoImageData(tr, Complex[parts[i]]);
+			var dataNode = createEmptyNode("data");
+			dataNode.textContent = dataURL;
+			//saveAs(dataURLtoBlob(dataURL), "owl" + parts[i] + ".png");
+			dataNode.setAttribute("part", parts[i]);
+			bmp.appendChild(dataNode);
+			imitateData(bmp);
+			
+		}
+		//var dataURL = document.getElementById("dresdenimg").getAttribute("src");
+		
+		if (!frontPointAdded) {
+			addPoint(that.rsCanvas.getFrontPoint(), {id: that.rsCanvas.serverId + "frontPoint", movable: "false", color: "red"});
+			frontPointAdded = true;
+		}
+		addStereoPoints();
+		that.rsCanvas.canvas3d.addEventListener("transformChanged", that.showFront);
+		that.rsCanvas.canvas3d.addEventListener("rotationChanged", that.showFront);
+		
+		
+	}
+	
 	var pointsAdded = false;
 	var addPoints = function (event) {
 		if (!pointsAdded) {
@@ -140,7 +175,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 			for (var i = 0; i < arrVectors.length; i++ ) {
 				var point = createEmptyNode("point");
 				point.setAttribute("movable", "false");
-				point.setAttribute("color", "orange");
+				point.setAttribute("color", "yellow");
 				var sp = createEmptyNode("sp");
 				sp.setAttribute("x", arrVectors[i].x);
 				sp.setAttribute("y", arrVectors[i].y);
@@ -155,22 +190,52 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 			pointsAdded = true;
 		}
 	}
+	var stereoPointsAdded = false;
+	var addStereoPoints = function (event) {
+		if (!stereoPointsAdded) {
+			var arrVectors = getIcosahedron();
+			var arrData = [];
+			for (var i = 0; i < parts.length; i++ ) {
+				var point = createEmptyNode("point");
+				point.setAttribute("movable", "false");
+				point.setAttribute("color", "orange");
+				point.setAttribute("id", "stereo" + i);
+				var cn = that.rsCanvas.getTransform().apply(that.rsCanvas.getTransform().apply(Complex[parts[i]])).toXMLObj();
+				point.appendChild(cn);
+				var label = createEmptyNode("label");
+				label.textContent = "#" + i + " " + that.rsCanvas.getTransform().apply(Complex[parts[i]]).toString(true, 3) + " (" + Complex[parts[i]].toString() + ")";
+				point.appendChild(label);
+				arrData.push(point);
+			}
+			imitateData(arrData);
+			stereoPointsAdded = true;
+		} else {
+			for (var i = 0; i < parts.length; i++) {
+				var label = createEmptyNode("label");
+				label.textContent = "#" + i + " " + that.rsCanvas.getTransform().apply(Complex[parts[i]]).toString(true, 3) + " (" + Complex[parts[i]].toString() + ")";
+				imitateData([that.rsCanvas.getTransform().apply(Complex[parts[i]]).toXMLObj(), label], "stereo" + i);
+			}
+		}
+	}
 	
 	this.fillBitmap = function(event) {
 		console.log("fill bitmap");
 		clearTestBitmapCanvas();
 		var tr = that.rsCanvas.getTransform();
 		var dataURL = getTestImageData(tr);
+		//var dataURL = document.getElementById("dresdenimg").getAttribute("src");
 		
 		var bmp = createEmptyNode("bitmap");
 		bmp.setAttribute("name", "owl");
 		bmp.appendChild(tr.toXML());
 		var dataNode = createEmptyNode("data");
 		dataNode.textContent = dataURL;
+		//saveAs(dataURLtoBlob(dataURL), "owlUV.png");
+
 		bmp.appendChild(dataNode);
 		imitateData(bmp);
 		addCenter();
-		that.rsCanvas.canvas3d.addEventListener("transformChanged", that.fillBitmapContinue);
+		//that.rsCanvas.canvas3d.addEventListener("transformChanged", that.fillBitmapContinue);
 
 		
 	}
@@ -200,6 +265,11 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		imitateData(c.toXMLObj(), that.rsCanvas.serverId + "transformCenter");
 		
 	}
+	this.showFront = function(event) {
+		var c = that.rsCanvas.getFrontPoint();
+		imitateData(c.toXMLObj(), that.rsCanvas.serverId + "frontPoint");
+		
+	}
 	function clearTestBitmapCanvas () {
 		var c;// = document.getElementById("testBitmapCanvas");
 		while (c = document.getElementById("testBitmapCanvas")) {
@@ -218,6 +288,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 		}
 	}
 	
+//-------------------------end of debug functions--------------------------------------------------
 	
 	this.updateCanvas = function (configObj) {
 		console.log("updateCanvas", configObj);
@@ -354,6 +425,7 @@ var RSCanvasContainer = function (domElement, surfaceData, canvasData, idArg) {
 	var td5 = document.createElement("td");
 	//addButton(td5, "Copy image", this.copyImage);
 	td5.setAttribute("valign", "top");
+	addButton(td5, "Stereographic", this.stereoBitmaps);
 	addButton(td5, "Fill bitmap", this.fillBitmap);
 	addButton(td5, "Multiple bitmaps", this.fillMultiple);
 	

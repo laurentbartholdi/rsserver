@@ -225,6 +225,7 @@
 
 	
 	Complex.prototype.equals = function (z) {
+		if (this.isInfinity() && z.isInfinity()) return true; 
 		return (Math.abs(this.re - z.re) < Complex.epsilon && Math.abs(this.i - z.i) < Complex.epsilon);
 	};
 
@@ -458,6 +459,11 @@
 	Complex.min = function (c1,c2) {
 		return Math.min(c1.r(),c2.r())==c1.r()?c1:c2;
 	};
+	
+	Complex.prototype.isInfinity = function () {
+		if (Math.abs(this.re) == Number.POSITIVE_INFINITY || Math.abs(this.i) == Number.POSITIVE_INFINITY) return true;
+		return false;
+	}
 
 	// Complex expression parser
 	// str:String
@@ -768,6 +774,7 @@
 		el.setAttribute("name", "Infinity");
 		return el;
 	}
+	Complex["Infinity"].isInfinity = function() {return true}
 
 	// Expose the Complex class
 	global.Complex = Complex;
