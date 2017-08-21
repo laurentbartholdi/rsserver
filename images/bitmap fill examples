@@ -7,7 +7,7 @@ Globus of the Dresden:
 Bitmap with a specific name (will be cashed)
 <downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"owl\"><data>images/owlUV.png</data></bitmap></downdata>
 
-Bitmap with a transformation specified. Fits best if transformation of the coinside with the given transformation (up to rotation). 
+Bitmap with a transformation specified. Fits best if transformation of the sphere surface coinside with the given transformation (up to rotation). 
 <downdata session=\"s1\" object=\"canvas0\" action=\"populate\"><bitmap name=\"owl\"><transform><cn re=\"0.08015787435910315\" im=\"1.2343558080354053\"/><cn re=\"-0.9431199115365583\" im=\"-0.435698964370169\" r=\"1.0388978559463693\"/><cn re=\"0.8520091343008934\" im=\"-0.5944654659084936\" r=\"1.0388978559463677\"/><cn re=\"0.12045751414105998\" im=\"1.6900127205983797\"/></transform><data>images/owlUV(1).png</data></bitmap></downdata>
 
 
