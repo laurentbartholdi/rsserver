@@ -222,6 +222,17 @@ RST.applyTransform := function(t, c)
 
 end;
 
+RST.transformtag := function (cna, cnb, cnc, cnd)
+	return rec(name:="transform", attributes:=rec(), content:=[cna, cnb, cnc, cnd]);
+end;
+
+RST.lintransformtag := function(cna, cnb)
+	return rec(name:="transform", attributes:=rec(type:="linear"), content:=[cna, cnb]);
+end;
+
+RST.zoomtransformtag := function(w0, scale)
+	return rec(name:="transform", attributes:=rec(type:="zoom", scale:=String(scale)), content:=[w0]);
+end;
 
  
 
