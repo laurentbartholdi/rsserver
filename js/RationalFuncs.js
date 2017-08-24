@@ -184,17 +184,21 @@ var ComplexShaderMap = function (code, polar, uniforms, methods) {
 	
 	function getUniformsDeclaration(uniforms) {
 		var res = "";
-		for (var name in uniforms) {
-			res += (uniforms[name].constant ? "const " : "uniform ") + ComplexShaderMap.uniformsTypesMap[uniforms[name].type].glsl + " " +
-					name + (uniforms[name].constant ? ("= " + (uniforms[name].type == "f" ? getFloatString(uniforms[name].value):uniforms[name].value)) : "") +
-					(ComplexShaderMap.uniformsTypesMap[uniforms[name].type].array ? 
-							(" [" + (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece > 1 ? 
-									(uniforms[name].value.length/ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece):
-										(uniforms[name].value.length)) + "]"): "") + ";\n"; 
-			if (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].array) {
-				res += "const int " + name + "Length = " + (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece > 1 ? 
-						(uniforms[name].value.length/ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece):
-							(uniforms[name].value.length)) + ";\n";
+		if (typeof uniforms === "string") {
+			res = uniforms;
+		} else {
+			for (var name in uniforms) {
+				res += (uniforms[name].constant ? "const " : "uniform ") + ComplexShaderMap.uniformsTypesMap[uniforms[name].type].glsl + " " +
+						name + (uniforms[name].constant ? ("= " + (uniforms[name].type == "f" ? getFloatString(uniforms[name].value):uniforms[name].value)) : "") +
+						(ComplexShaderMap.uniformsTypesMap[uniforms[name].type].array ? 
+								(" [" + (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece > 1 ? 
+										(uniforms[name].value.length/ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece):
+											(uniforms[name].value.length)) + "]"): "") + ";\n"; 
+				if (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].array) {
+					res += "const int " + name + "Length = " + (ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece > 1 ? 
+							(uniforms[name].value.length/ComplexShaderMap.uniformsTypesMap[uniforms[name].type].piece):
+								(uniforms[name].value.length)) + ";\n";
+				}
 			}
 		}
 		return res;
@@ -206,6 +210,26 @@ var ComplexShaderMap = function (code, polar, uniforms, methods) {
 	this.copy = function() {
 		return new ComplexShaderMap(this.code, this.polar, this.uniforms, this.methods);
 	}
+	
+
+};
+
+ComplexShaderMap.fromXML = function(funcElement) {
+	if (funcElement.tagName != "function") return null;
+	if (funcElement.getAttribute("type") != "custom") return null;
+	var polar = ConfigManager.parseBool(funcElement.getAttribute("polar"));
+	var codeEl = funcElement.getElementsByTagName("code")[0];
+	var code = "";
+	if (codeEl) code = codeEl.textContent;
+	var methods = "";
+	var methodsEl = funcElement.getElementsByTagName("methods")[0];
+	if (methodsEl) methods = mthodsEl.textContent;
+	var uniforms = {};
+	var uniformsEl = funcElement.getElementsByTagName("uniform");
+	for (var i = 0; i < uniformsEl.length; i++) {
+		ComplexShaderMap.parseUniform(uniformsEl[i], uniforms);
+	}
+	return new ComplexShaderMap(code, polar, uniforms, methods);
 
 };
 
@@ -228,33 +252,123 @@ ComplexShaderMap.uniformsTypesMap = {
 		m4v: {glsl: "mat4", array: true}
 };
 
-var complexToColorString_ = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n" +
+ComplexShaderMap.parseUniform = function (uniformEl, resObj) {
+	if (!uniformEl || uniformEl.nodeName != "uniform" || !uniformEl.getAttribute("name")) { 
+		console.error("Invalid uniform element", uniformEl);
+		return null
+	}
+	var res = {};
+	res.type = uniformEl.getAttribute("type") || "f";
+	res.constant = ConfigManager.parseBool(uniformEl.getAttribute("constant"));
+	var str = uniformEl.textContent;
+	var strArr = str.split(",");
+	if (res.type.charAt(0) == "i") {
+		for (var i = 0; i < strArr.length; i++)
+			strArr[i] = parseInt(strArr[i]);
+	} else if (res.type != "c"){
+		for (var i = 0; i < strArr.length; i++)
+			strArr[i] = parseFloat(strArr[i]);		
+	}
+	if ( ! ComplexShaderMap.uniformsTypesMap[res.type]) {
+		console.error ("Invalid uniform type", res.type);
+		return null;
+	}
+	if (ComplexShaderMap.uniformsTypesMap[res.type].array) {
+		var step = 1;
+		if (res.type == "iv" || res.type == "iv1") {
+			res.value = new Int32Array(strArr.length);
+		} else if (res.type == "fv" || res.type == "fv1"){
+			res.value = new Float32Array(strArr.length);
+		} else {
+			res.value = new Array();
+			if (res.type == "m4v") step = 16;
+			else step = parseInt(res.type.charAt(1));
+			res.value = new Array(strArr.length/step);
+		}
+		console.log(step, strArr.length);
+		for (var i = 0; i < strArr.length/step; i ++) {
+			switch (res.type) {
+			case "m4v" :{
+				res.value[i] = new THREE.Matrix4();
+				res.value[i].fromArray(strArr, i*16);
+				break;
+			}
+			case "v2v" : {
+				res.value[i] = new THREE.Vector2(strArr[2*i], strArr[2*i + 1]);
+				break;
+			}
+			case "v3v" : {
+				res.value[i] = new THREE.Vector3(strArr[3*i], strArr[3*i + 1], strArr[3*i + 2]);
+				break;
+			}
+			case "v4v" : {
+				res.value[i] = new THREE.Vector4(strArr[4*i], strArr[4*i + 1], strArr[4*i + 2], strArr[4*i + 3]);
+				break;
+			}
+			default: res.value[i] = strArr[i];
+			} 
+		}
+		
+	} else {
+		switch (res.type) {
+			case "i": 
+			case "f": {
+				res.value = strArr[0];
+				break;
+			} 
+			case "v2": {
+				res.value = new THREE.Vector2(strArr[0], strArr[1]);
+				break;
+			} 
+			case "v3": {
+				res.value = new THREE.Vector3(strArr[0], strArr[1], strArr[2]);
+				break;
+			} 
+			case "v4": {
+				res.value = new THREE.Vector4(strArr[0], strArr[1], strArr[2], strArr[3]);
+				break;
+			} 
+			case "m4": {
+				res.value = new THREE.Matrix4();
+				res.value.fromArray(strArr);
+				break;
+			} 
+			case "c": {
+				res.value = ConfigManager.parseColor(str);
+				break;
+			} 
+		}
+	}
+	console.log(res.value);
+	resObj = resObj || {};
+	resObj[uniformEl.getAttribute("name")] = res;
+	return resObj;
+};
+
+var complexToColorString__ = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n" +
 "	float nl = length(n);\n" +
 "	float dl = length(d);\n" +
 //!!!!!!!!!!!!!!!!
 "	float theta = atan(2.*dl*nl, nl*nl - dl*dl)/1.570796327;//float(!isNaN(z))*length(z) + float(isNaN(z))*.5; \n"+
 "	float phi = atan(n.y*d.x - n.x*d.y, dot(n, d));//float(!isNaN(z))*atan(z.y, z.x); \n"+
-"   vec3 c = vec3(phi < 0. ? phi/6.283185307 + 1. : phi/6.283185307,clamp(2.-theta, 0.0, 1.0), clamp(theta, 0.0, 1.0)); \n" +
+"   vec3 hsl = vec3(phi < 0. ? phi/6.283185307 + 1. : phi/6.283185307,clamp(2.-theta, 0.0, 1.0), clamp(theta, 0.0, 1.0)); \n" +
  "   vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n" +
-  "  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n" +
-   " return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n" +
+  "  vec3 p = abs(fract(hsl.xxx + K.xyz) * 6.0 - K.www);\n" +
+   " return hsl.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsl.y);\n" +
 "}";
 
-var complexToColorString = 	"vec3 complex2rgb(vec2 n, vec2 d){\n"+ // n/d is a normalized P1 point
+var complexToColorString_ = 	"vec3 complex2rgb(vec2 n, vec2 d){\n"+ // n/d is a normalized P1 point
 "  vec3 p = vec3(2.*dot(n,d),2.*(n.y*d.x-n.x*d.y),dot(d,d)-dot(n,n));\n"+  // project to sphere in R^3
 "  return smoothstep(-0.5,1.0,p*mat3(vec3(1.0,0.0,0.0),vec3(-0.5,0.866025,0.0),vec3(-0.5,-0.866025,0.0)))+p.z*vec3(1.0,1.0,1.0);\n"+ // combination of red at 1, green at omega, blue at omega^2, white at 0, and black at infinity
 "}";
 
 
-var complexToColorString__ = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n"+ // n/d is a normalized P1 point
-"    float nl = length(n);\n" +
-"    float dl = length(d);\n" +
-"    float theta = atan(2.*dl*nl, nl*nl - dl*dl)/1.570796327;//float(!isNaN(z))*length(z) + float(isNaN(z))*.5; \n"+
-"    float phi = atan(n.y*d.x - n.x*d.y, dot(n, d)) / 6.283185307;\n"+
-"    vec3 c = vec3(phi,nl/(nl+dl),clamp(2.0*dl/(nl+dl),0.0,1.0)); //clamp(2.-theta, 0.0, 1.0), clamp(theta, 0.0, 1.0)); \n" +
-"    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);\n" +
-"    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);\n" +
-"    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);\n" +
+var complexToColorString = 	"vec3 complex2rgb(vec2 n, vec2 d){ \n"+ // n/d is a normalized P1 point
+"	vec2 nd = vec2(dot(n, n), dot(d, d));\n" +
+"	vec2 p = vec2(dot(n,d),n.x*d.y-n.y*d.x);\n"+  
+"	vec3 rgb = vec3(p.x,-0.5*p.x - 0.866025*p.y, -0.5*p.x + 0.866025*p.y);\n" +
+"	rgb *= nd.x > nd.y ? sqrt(nd.y/nd.x) : sqrt(nd.x/nd.y); \n" +
+"	return (rgb + nd.yyy)/(nd.x + nd.y);\n" +
 "}";
 
 
@@ -279,17 +393,13 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	//console.log("cyclePeriod", jData.cycleperiod);
 	var juliaColor = jData.config.juliaColor || new THREE.Color(0x999999);
 	var juliatestMethods = jData.degree > 1 ? [	
-	"// Color parameters",
 	complexToColorString,
 
 	"vec2 complexMul(vec2 a, vec2 b) {",
-	"	return vec2(a.x*b.x-a.y*b.y,dot(a.xy,b.yx));",
-	"}",
-	"vec2 complexDiv(vec2 a, vec2 b) {", // unused
-	"	return vec2(dot(a,b),a.y*b.x-a.x*b.y)/dot(b,b);",
+	"	return vec2(a.x*b.x-a.y*b.y,dot(a.xy, b.yx));",
 	"}",
 
-	"vec3 color(vec2 c, vec2 z, vec2 w , float scale) {", // scale unused
+	"vec3 color(vec2 c, vec2 z, vec2 w , float scale) {", 
 	"  float lambda = inversesqrt(dot(z,z)+dot(w,w));",
 	"  vec2 n0 = z*lambda;",
 	"  vec2 d0 = w*lambda;", // n0/d0 is the beginning point, normalized
@@ -317,21 +427,9 @@ function initJuliaMap(dataStructure, oldMap, settings) {//checkTriggers) {
 	"}"
 	].join("\n") : 
 		[	
-			"// Color parameters",
 			complexToColorString,
-
-			"vec2 complexMul(vec2 a, vec2 b) {",
-			"	return vec2(a.x*b.x-a.y*b.y,dot(a.xy,b.yx));",
-			"}",
-			"vec2 complexDiv(vec2 a, vec2 b) {", // unused
-			"	return vec2(dot(a,b),a.y*b.x-a.x*b.y)/dot(b,b);",
-			"}",
-
-			"vec3 color(vec2 c, vec2 z, vec2 w , float scale) {", // scale unused
-			"  float lambda = inversesqrt(dot(z,z)+dot(w,w));",
-			"  vec2 n0 = z*lambda;",
-			"  vec2 d0 = w*lambda;", // n0/d0 is the beginning point, normalized
-			"  return complex2rgb(n0,d0);", // test sphere color
+			"vec3 color(vec2 c, vec2 z, vec2 w , float scale) {", 
+			"  return complex2rgb(z,w);", 
 			"}"
 			].join("\n");
 //console.log(juliatestMethods, juliatestUniforms);	
