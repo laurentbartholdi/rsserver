@@ -165,7 +165,7 @@ function getConnectionId (ws) {
 function removeConnection (ws) {
 	showLog ("Closing connection " + ws.id);
 	var dataObj = {updata: {$: {status: "removed", session: ws.session, object: ws.window}}};
-	var str = xmlBuilder.buildObject(dataObj).replace(/"/g, "'") + "\n"; 
+	var str = xmlBuilder.buildObject(dataObj).replace(/"/g, "'") + "\n"; //"
 	if (tcpSocket) tcpSocket.write(str);
 	connections[ws.id] = null;
 	connectionsNum --;
@@ -599,7 +599,7 @@ function getFile(localPath, res, mimeType) {
 	//res.setHeader("Content-Length", contents.length);
 	res.setHeader("Content-Type", mimeType);
 	res.statusCode = 200;
-	res.end(contents, mimeType, function() {});
+	res.end(contents, "UTF-8", function() {});
 	debugLog("Loaded: ", localPath);
 	/*
 	fs.readFile(localPath, function(err, contents) {
