@@ -1479,7 +1479,7 @@ rp.parseData = function(data) {
 			var succes = false;
 			if (arcsData[i].getAttribute("type") == "transformation") {
 				var transformCoefs = arcsData[i].getElementsByTagName("cn");
-				if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at four <cn> child nodes", arcsData[i]);
+				if (transformCoefs.length < 4) console.error("Invalid arc definition. There must be at least four <cn> child nodes", arcsData[i]);
 				else {
 					var t = new MoebiusTransform(Complex.fromXML(transformCoefs[0]),
 												Complex.fromXML(transformCoefs[1]),
@@ -1508,7 +1508,8 @@ rp.parseData = function(data) {
 				} else {
 					for (var j = 0; j < sps.length; j++)
 						curArcData.push(spointToVector(sps[j]));
-				}
+				        }
+                                #LB: curArcData contains the parsed points. Now interpolate / normalize, and push to this.arcsData
 				var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
 				if (v1.equals(v2)) {
 					var v0 = curArcData[1].normalize();
