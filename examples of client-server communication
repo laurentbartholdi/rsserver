@@ -1,6 +1,8 @@
 ------------------------------
 Start of the session:
 --------------------------------
+If a web interface is connected, should receive:
+
 Web->TCP <updata session='s1' status='created'><window id='w0'/></updata>
 
 
@@ -14,7 +16,7 @@ Web->TCP
 Creating an object in a window
 -----------------------------------
 
-TCP->Web <downdata session='s1' obejct='w0' action='create'><button/></downdata>
+TCP->Web <downdata session='s1' object='w0' action='create'><button/></downdata>
 Web->TCP <updata session="s1" object="w0" status="created"><button id="button0"/></updata>
 Id of the button is generated automatically.
 
@@ -25,7 +27,7 @@ Web->TCP
 
 
 Creating and populating a canvas
-TCP->Web <downdata session='s1' obejct='w0' action='create'><canvas/></downdata>
+TCP->Web <downdata session='s1' object='w0' action='create'><canvas/></downdata>
 Web->TCP <updata session="s1" object="w0" status="created"><canvas id="canvas0"/></updata>
 
 TCP->Web <downdata session="s1" object="canvas0" action="populate">
@@ -339,3 +341,5 @@ Web->TCP
 	</transform>
 </updata>
 -----------------------------------------------------------------------------------------------------------------
+
+<downdata session="s1" object="canvas0" action="populate"><function type="newton" degree="3"/><point movable="true"><cn re="1", im="0"/></point><config key="width" value="1000"/><transform><cn re="0", im="0"/><cn re="1" im="0"/><cn re="1" im="0"/><cn re="0" im="0"/></transform></downdata>

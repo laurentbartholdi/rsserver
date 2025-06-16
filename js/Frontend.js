@@ -256,7 +256,7 @@ var DATA_IN_XML = true;
 			} else {
 				err = "Invalid canvas container";
 			}
-			return err;
+		    return err;
 				
 		};
 		
@@ -390,7 +390,6 @@ var DATA_IN_XML = true;
 			
 			
 			function addElement (dataNode, resEl) {
-				console.log("Adding element ", dataNode);
 				//returns error string or nothing, if everything is Ok
 				//resEl - <updata> to send response to server. Description of created element should be added here
 				var type = dataNode.nodeName;

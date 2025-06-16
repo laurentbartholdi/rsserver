@@ -1509,7 +1509,7 @@ rp.parseData = function(data) {
 					for (var j = 0; j < sps.length; j++)
 						curArcData.push(spointToVector(sps[j]));
 				        }
-                                #LB: curArcData contains the parsed points. Now interpolate / normalize, and push to this.arcsData
+                            // LB: curArcData contains the parsed points. Now interpolate / normalize, and push to this.arcsData
 				var v1 = curArcData[0].normalize(), v2 = curArcData[curArcData.length - 1].normalize();
 				if (v1.equals(v2)) {
 					var v0 = curArcData[1].normalize();
